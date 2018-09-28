@@ -457,6 +457,11 @@ void auto_init(void)
     auto_init_veml6070();
 #endif
 
+#ifdef MODULE_CCS811
+    extern void auto_init_ccs811(void);
+    auto_init_ccs811();
+#endif
+
 #endif /* MODULE_AUTO_INIT_SAUL */
 
 #ifdef MODULE_AUTO_INIT_GNRC_RPL
