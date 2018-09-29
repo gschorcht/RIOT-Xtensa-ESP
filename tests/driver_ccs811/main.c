@@ -26,7 +26,7 @@
  * make command, for example:
  *
  * ```
- * USEMODULE=ccs811_full "CFLAGS=-DUSE_CCS811_DATA_READY_INT" \
+ * USEMODULE=ccs811_full CFLAGS="-DUSE_CCS811_DATA_READY_INT" \
  * make flash BOARD=... -C tests/driver_ccs811
  * ```
  */
