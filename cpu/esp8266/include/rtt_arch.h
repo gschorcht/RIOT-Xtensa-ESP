@@ -15,17 +15,17 @@
  *
  * Due to the inaccuracy of the ESP8266 RTC counter clocked by an RC
  * oscillator and the fact that it is not possible to generate interrupts
- * with the RTC, the 32-bit RTT counter is emulated by CPU timers in the
+ * with the RTC, the RTT counter is emulated by CPU timers in the
  * active state of the CPU. The RTC counter is only used in sleep mode
  * or during a reboot. For this purpose the CPU timer is stored in the
  * RTC memory when entering a sleep mode or a restart. When leaving the
  * sleep mode or after a restart, it is updated by the RTC counter.
  *
- * The emulated RTT counter implements a 32-bit RTT counter with a frequency
- * of 1 MHz using either
+ * The emulated RTT counter implements a 27-bit RTT counter with a frequency
+ * of 32.768 kHz using either
  *
  * - the 32-bit CPU FRC2 hardware counter with a frequency of 312.500 kHz or
- * - the 32-bit microsecond @ref xtimer module and the system time.
+ * - the 32-bit microsecond @ref xtimer module and the microsecond system time.
  *
  * The FRC2 CPU counter is used whenever possible. Because the FRC2 CPU
  * counter is occupied by the WiFi hardware driver for WiFi power management,
@@ -37,9 +37,9 @@
  *
  * The emulated RTT counter uses a hardware abstraction layer that is
  * defined by a driver interface of the type #rtt_hw_driver_t, which
- * generally provides a 32-bit RTC counter with a frequency of 1 MHz and
+ * generally provides a 27-bit RTC counter with a frequency of 32.678 kHz and
  * without set feature. This way the RTT implementation always sees a
- * 32-bit counter with a frequency of 1 MHz regardless of which
+ * 27-bit counter with a frequency of 32.678 kHz regardless of which
  * implementation is actually used.
  *
  * @author      Gunar Schorcht <gunar@schorcht.net>
@@ -53,11 +53,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief   Maximum value of the 32-bit RTT hardware counter
- */
-#define RTT_HW_COUNTER_MAX  UINT32_MAX
 
 /**
  * @brief   RTT hardware abstraction layer driver

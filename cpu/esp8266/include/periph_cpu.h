@@ -237,8 +237,9 @@ typedef struct {
  * @name    RTT and RTC configuration
  * @{
  */
-#define RTT_FREQUENCY       (1000000U)
-#define RTT_MAX_VALUE       (0xFFFFFFFFUL)
+#define RTT_FREQUENCY       (32768UL)
+#define RTT_COUNTER_SIZE    (27)
+#define RTT_MAX_VALUE       ((1UL << RTT_COUNTER_SIZE) - 1)
 /** @} */
 
 /**

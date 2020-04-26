@@ -37,6 +37,10 @@
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
+#define SYS_US_TO_COUNT(us)     ((uint32_t)((uint64_t)(us) * RTT_FREQUENCY / 1000000UL))
+#define SYS_COUNT_TO_US(cnt)    ((uint32_t)((uint64_t)(cnt) * 1000000UL / RTT_FREQUENCY))
+#define SYS_OVERFLOW            (SYS_COUNT_TO_US(1ULL << RTT_COUNTER_SIZE))
+
 /* variables used to save counters during sleep or reboot */
 static uint32_t RTC_BSS_ATTR _rtc_counter_saved;
 static uint32_t RTC_BSS_ATTR _sys_counter_saved;
@@ -71,25 +75,28 @@ static void _sys_poweroff(void)
 static uint32_t _sys_get_counter(void)
 {
     uint32_t _sys_time = system_get_time();
-    DEBUG("%s sys_time=%u sys_offset=%u @sys=%u\n", __func__,
-          _sys_time, _sys_counter_offset, _sys_time + _sys_counter_offset);
-    return _sys_time + _sys_counter_offset;
+    DEBUG("%s sys_time=%u sys_offset=%u @sys_count=%u\n", __func__,
+          _sys_time, _sys_counter_offset,
+          SYS_US_TO_COUNT(_sys_time + _sys_counter_offset));
+    return SYS_US_TO_COUNT(_sys_time + _sys_counter_offset);
 }
 
-static void _sys_set_alarm(uint32_t alarm_us, rtt_cb_t cb, void *arg)
+static void _sys_set_alarm(uint32_t alarm, rtt_cb_t cb, void *arg)
 {
-    /* compute the time difference for the alarm in microseconds */
-    uint32_t _sys_time = _sys_get_counter();
-    uint32_t _rtt_diff = alarm_us - _sys_time;
+    assert(alarm <= RTT_MAX_VALUE);
 
-    DEBUG("%s alarm=%u sys_diff=%u @sys=%u\n", __func__,
-          alarm_us, _rtt_diff, _sys_time);
+    /* compute the time difference for the alarm in microseconds */
+    uint32_t _sys_count = _sys_get_counter();
+    uint32_t _rtt_diff = alarm - _sys_count;
+
+    DEBUG("%s alarm=%u rtt_diff=%u sys_diff=%llu @sys_count=%u\n", __func__,
+          alarm_us, _rtt_diff, SYS_COUNT_TO_US(_rtt_diff), _sys_count);
 
     /* set the timer */
     _sys_timer.callback = cb;
     _sys_timer.arg = arg;
     
-    xtimer_set(&_sys_timer, _rtt_diff);
+    xtimer_set(&_sys_timer, SYS_COUNT_TO_US(_rtt_diff));
 }
 
 static void _sys_clear_alarm(void)

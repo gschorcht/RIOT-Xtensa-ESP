@@ -33,14 +33,15 @@
 #include "syscalls.h"
 #include "timex.h"
 
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG (1)
 #include "debug.h"
 
 #define FRC_CLK_DIV_256         2   /* divider for the 80 MHz AHB clock */
 #define FRC_FREQUENCY           (80000000UL >> 8)
-#define FRC_COUNTER_TO_US(cnt)  ((uint32_t)((uint64_t)(cnt) * 1000000UL / FRC_FREQUENCY))
-#define FRC_US_TO_COUNTER(us)   ((uint32_t)((uint64_t)(us) * FRC_FREQUENCY / 1000000UL))
-#define FRC_OVERFLOW            (FRC_US_TO_COUNTER(1ULL << 32))
+#define FRC_TICK_TO_COUNT(tck)  ((uint32_t)((uint64_t)(tck) * RTT_FREQUENCY / FRC_FREQUENCY))
+#define FRC_COUNT_TO_TICK(cnt)  ((uint32_t)((uint64_t)(cnt) * FRC_FREQUENCY / RTT_FREQUENCY))
+#define FRC_US_TO_TICK(us)      ((uint32_t)((uint64_t)(us) * FRC_FREQUENCY / 1000000UL))
+#define FRC_OVERFLOW            (FRC_COUNT_TO_TICK(1ULL << RTT_COUNTER_SIZE))
 
 /**
  * FRC2 is a 32-bit countup timer, triggers interrupt when reaches alarm value.
@@ -137,10 +138,10 @@ static void _frc_poweroff(void)
 
 static uint32_t _frc_get_counter(void)
 {
-    uint32_t counter = frc2.count;
-    DEBUG("%s frc=%u frc_us=%u @sys_time=%u\n", __func__,
-          counter, FRC_COUNTER_TO_US(counter), system_get_time());
-    return FRC_COUNTER_TO_US(counter);
+    uint32_t ticks = frc2.count;
+    DEBUG("%s frc_ticks=%u frc_count=%u @sys_time=%u\n", __func__,
+          ticks, FRC_TICK_TO_COUNT(ticks), system_get_time());
+    return FRC_TICK_TO_COUNT(ticks);
 }
 
 static void _update_alarm(uint32_t counter)
@@ -155,19 +156,21 @@ static void _update_alarm(uint32_t counter)
     }
 }
 
-static void _frc_set_alarm(uint32_t alarm_us, rtt_cb_t cb, void *arg)
+static void _frc_set_alarm(uint32_t alarm, rtt_cb_t cb, void *arg)
 {
+    assert(alarm <= RTT_MAX_VALUE);
+
     /* save current counter value */
     uint32_t _frc_counter = frc2.count;
 
-    _frc_alarm.alarm_set = FRC_US_TO_COUNTER(alarm_us) % FRC_OVERFLOW;
+    _frc_alarm.alarm_set = FRC_COUNT_TO_TICK(alarm) % FRC_OVERFLOW;
     _frc_alarm.alarm_cb = cb;
     _frc_alarm.alarm_arg = arg;
 
     _update_alarm(_frc_counter);
 
     DEBUG("%s alarm=%u frc_alarm=%u frc_alarm_set=%u @frc=%u @sys_time=%u\n",
-          __func__, alarm_us,
+          __func__, alarm,
           _frc_alarm.alarm_set, frc2.alarm, _frc_counter, system_get_time());
 }
 
@@ -201,7 +204,7 @@ static void _frc_restore_counter(bool in_init)
     uint32_t _rtc_counter = RTC.COUNTER;
     uint32_t _rtc_diff = _rtc_counter - _rtc_counter_saved;
     uint32_t _diff_us = rtc_clk_to_us(_rtc_diff, pm_rtc_clock_cali_proc());
-    uint32_t _frc_diff = FRC_US_TO_COUNTER(_diff_us);
+    uint32_t _frc_diff = FRC_US_TO_TICK(_diff_us);
 
     frc2.load = (_frc_counter_saved + _frc_diff) % FRC_OVERFLOW;
 
