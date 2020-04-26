@@ -20,22 +20,28 @@
 #include "sdkconfig.h"
 
 #include "nvs_flash.h"
-#ifndef RIOT_VERSION
+#ifdef RIOT_VERSION
+#include "test_utils/expect.h"
+#include "esp_wifi_types.h"
+#else
 #include "tcpip_adapter.h"
 #endif
 
 #include "esp_log.h"
 #include "esp_image_format.h"
 #include "esp_phy_init.h"
-#include "esp_wifi_osi.h"
 #include "esp_heap_caps_init.h"
-#include "esp_system.h"
 #include "esp_task_wdt.h"
 #include "internal/esp_wifi_internal.h"
 #include "internal/esp_system_internal.h"
+#include "esp8266/eagle_soc.h"
 
-#define FLASH_MAP_ADDR 0x40200000
-#define FLASH_MAP_SIZE 0x00100000
+#include "FreeRTOS.h"
+#include "task.h"
+
+#ifndef CONFIG_NEWLIB_LIBRARY_CUSTOMER
+#include "esp_newlib.h"
+#endif
 
 extern void chip_boot(void);
 extern int esp_rtc_init(void);
@@ -46,41 +52,55 @@ extern int wifi_timer_init(void);
 extern int wifi_nvs_init(void);
 extern esp_err_t esp_pthread_init(void);
 extern void phy_get_bb_evm(void);
+extern void uart_div_modify(uint8_t uart_no, uint16_t DivLatchValue);
+
+static inline int should_load(uint32_t load_addr)
+{
+    if (IS_USR_RTC(load_addr)) {
+        if (esp_reset_reason_early() == ESP_RST_DEEPSLEEP)
+            return 0;
+    }
+
+    if (IS_FLASH(load_addr))
+        return 0;
+
+    return 1;
+}
 
 static void user_init_entry(void *param)
 {
-    extern void app_main(void);
-
-    phy_get_bb_evm();
-
 #ifdef MCU_ESP8266
+    
     /* initialize newlib system calls */
     extern void syscalls_init (void);
     syscalls_init ();
+#else
+    void (**func)(void);
+
+    extern void (*__init_array_start)(void);
+    extern void (*__init_array_end)(void);
+
+    extern void app_main(void);
+
+    /* initialize C++ construture function */
+    for (func = &__init_array_start; func < &__init_array_end; func++)
+        func[0]();
 #endif
+    phy_get_bb_evm();
 
-    if (nvs_flash_init() != 0) {
-        assert(0);
-    }
-    if (wifi_nvs_init() != 0) {
-        assert(0);
-    }
-    if (esp_rtc_init() != 0) {
-        assert(0);
-    }
-    if (mac_init() != 0) {
-        assert(0);
-    }
-    if (base_gpio_init() != 0) {
-        assert(0);
-    };
+    /*enable tsf0 interrupt for pwm*/
+    REG_WRITE(PERIPHS_DPORT_BASEADDR, (REG_READ(PERIPHS_DPORT_BASEADDR) & ~0x1F) | 0x1);
+    REG_WRITE(INT_ENA_WDEV, REG_READ(INT_ENA_WDEV) | WDEV_TSF0_REACH_INT);
 
+    expect(nvs_flash_init() == 0);
+    expect(esp_rtc_init() == 0);
+    expect(mac_init() == 0);
+    expect(base_gpio_init() == 0);
     esp_phy_load_cal_and_init(0);
 
-#ifdef MODULE_ESP_WIFI_ANY
-    if (wifi_timer_init() != 0) {
-        assert(0);
-    }
+#ifndef MODULE_ESP_WIFI_ANY
+    /* we need os_timer, we have to initialize it if WiFi is not used */
+    expect(wifi_timer_init() == 0);
 #endif
 
     esp_wifi_set_rx_pbuf_mem_type(WIFI_RX_PBUF_DRAM);
@@ -94,35 +114,46 @@ static void user_init_entry(void *param)
 #endif
 
 #ifdef CONFIG_ENABLE_PTHREAD
-    if (esp_pthread_init() != 0) {
-        assert(0);
-    }
+    expect(esp_pthread_init() == 0);
+#endif
+
+#ifdef CONFIG_ESP8266_DEFAULT_CPU_FREQ_160
+    esp_set_cpu_freq(ESP_CPU_FREQ_160M);
 #endif
 
 #ifdef RIOT_VERSION
     /* initialize RIOT for ESP8266 */
-    wifi_os_init();
+    extern void esp_riot_init(void);
+    esp_riot_init();
     /* start RIOT kernel */
-    wifi_os_start();
+    extern void esp_riot_start(void);
+    esp_riot_start();
 #else
     app_main();
 
-    wifi_task_delete(NULL);
+    vTaskDelete(NULL);
 #endif
 }
 
-void call_user_start(size_t start_addr)
+void call_start_cpu(size_t start_addr)
 {
     int i;
     int *p;
 
     extern int _bss_start, _bss_end;
+    extern int _iram_bss_start, _iram_bss_end;
 
-    esp_image_header_t *head = (esp_image_header_t *)(FLASH_MAP_ADDR + (start_addr & (FLASH_MAP_SIZE - 1)));
+    esp_image_header_t *head = (esp_image_header_t *)(FLASH_BASE + (start_addr & (FLASH_SIZE - 1)));
     esp_image_segment_header_t *segment = (esp_image_segment_header_t *)((uintptr_t)head + sizeof(esp_image_header_t));
 
-    for (i = 0; i < 3; i++) {
+    /* The data in flash cannot be accessed by byte in this stage, so just access by word and get the segment count. */
+    uint8_t segment_count = ((*(volatile uint32_t *)head) & 0xFF00) >> 8;
+
+    for (i = 0; i < segment_count - 1; i++) {
         segment = (esp_image_segment_header_t *)((uintptr_t)segment + sizeof(esp_image_segment_header_t) + segment->data_len);
+
+        if (!should_load(segment->load_addr))
+            continue;
 
         uint32_t *dest = (uint32_t *)segment->load_addr;
         uint32_t *src = (uint32_t *)((uintptr_t)segment + sizeof(esp_image_segment_header_t));
@@ -149,6 +180,10 @@ void call_user_start(size_t start_addr)
     for (p = &_bss_start; p < &_bss_end; p++)
         *p = 0;
 
+    /* clear iram_bss data */
+    for (p = &_iram_bss_start; p < &_iram_bss_end; p++)
+        *p = 0;
+
     __asm__ __volatile__(
         "rsil       a2, 2\n"
         "movi       a1, _chip_interrupt_tmp\n"
@@ -156,16 +191,21 @@ void call_user_start(size_t start_addr)
 
     heap_caps_init();
 
+#ifdef CONFIG_INIT_OS_BEFORE_START
+    extern int __esp_os_init(void);
+    assert(__esp_os_init() == 0);
+#endif
+
+#ifndef CONFIG_NEWLIB_LIBRARY_CUSTOMER
+    esp_newlib_init();
+#endif
+
 #ifdef RIOT_VERSION
     /* in case of RIOT, user_init_entry is called directly and not from a task */
     user_init_entry(NULL);
 #else
-    wifi_os_init();
+    assert(xTaskCreate(user_init_entry, "uiT", CONFIG_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES, NULL) == pdPASS);
 
-    if (wifi_task_create(user_init_entry, "uiT", CONFIG_MAIN_TASK_STACK_SIZE, NULL, wifi_task_get_max_priority()) == NULL) {
-        assert(0);
-    }
-
-    wifi_os_start();
+    vTaskStartScheduler();
 #endif
 }

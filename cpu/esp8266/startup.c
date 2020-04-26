@@ -27,6 +27,7 @@
 
 #include "kernel_init.h"
 #include "periph/init.h"
+#include "periph/rtt.h"
 #include "periph/uart.h"
 
 #include "board.h"
@@ -65,7 +66,7 @@ void esp_riot_init(void)
     thread_isr_stack_init();
 
 #ifndef MCU_ESP8266
-    /* initialize newlib system calls */
+    /* initialize newlib system calls, for ESP8266 it's already done here */
     syscalls_init ();
 #endif
 
@@ -78,7 +79,7 @@ void esp_riot_init(void)
 #ifdef MODULE_ESP_LOG_STARTUP
     ets_printf("Starting ESP8266 CPU with ID: %08x\n", system_get_chip_id());
     ets_printf("ESP8266-RTOS-SDK Version %s\n\n", system_get_sdk_version());
-    ets_printf("CPU clock frequency: %d MHz\n", system_get_cpu_freq());
+    ets_printf("CPU clock frequency: %d MHz\n", esp_get_cpu_frequency());
     extern void heap_stats(void);
     heap_stats();
 #endif

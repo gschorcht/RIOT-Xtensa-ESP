@@ -65,69 +65,109 @@
 #include "esp_err.h"
 #include "esp_wifi_types.h"
 #include "esp_event.h"
-#include "esp_wifi_os_adapter.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define ESP_ERR_WIFI_NOT_INIT    (ESP_ERR_WIFI_BASE + 1)   /*!< WiFi driver was not installed by esp_wifi_init */
-#define ESP_ERR_WIFI_NOT_STARTED (ESP_ERR_WIFI_BASE + 2)   /*!< WiFi driver was not started by esp_wifi_start */
-#define ESP_ERR_WIFI_NOT_STOPPED (ESP_ERR_WIFI_BASE + 3)   /*!< WiFi driver was not stopped by esp_wifi_stop */
-#define ESP_ERR_WIFI_IF          (ESP_ERR_WIFI_BASE + 4)   /*!< WiFi interface error */
-#define ESP_ERR_WIFI_MODE        (ESP_ERR_WIFI_BASE + 5)   /*!< WiFi mode error */
-#define ESP_ERR_WIFI_STATE       (ESP_ERR_WIFI_BASE + 6)   /*!< WiFi internal state error */
-#define ESP_ERR_WIFI_CONN        (ESP_ERR_WIFI_BASE + 7)   /*!< WiFi internal control block of station or soft-AP error */
-#define ESP_ERR_WIFI_NVS         (ESP_ERR_WIFI_BASE + 8)   /*!< WiFi internal NVS module error */
-#define ESP_ERR_WIFI_MAC         (ESP_ERR_WIFI_BASE + 9)   /*!< MAC address is invalid */
-#define ESP_ERR_WIFI_SSID        (ESP_ERR_WIFI_BASE + 10)   /*!< SSID is invalid */
-#define ESP_ERR_WIFI_PASSWORD    (ESP_ERR_WIFI_BASE + 11)  /*!< Password is invalid */
-#define ESP_ERR_WIFI_TIMEOUT     (ESP_ERR_WIFI_BASE + 12)  /*!< Timeout error */
-#define ESP_ERR_WIFI_WAKE_FAIL   (ESP_ERR_WIFI_BASE + 13)  /*!< WiFi is in sleep state(RF closed) and wakeup fail */
-#define ESP_ERR_WIFI_WOULD_BLOCK (ESP_ERR_WIFI_BASE + 14)  /*!< The caller would block */
-#define ESP_ERR_WIFI_NOT_CONNECT (ESP_ERR_WIFI_BASE + 15)  /*!< Station still in disconnect status */
+#define ESP_ERR_WIFI_NOT_INIT     (ESP_ERR_WIFI_BASE + 1)   /*!< WiFi driver was not installed by esp_wifi_init */
+#define ESP_ERR_WIFI_NOT_STARTED  (ESP_ERR_WIFI_BASE + 2)   /*!< WiFi driver was not started by esp_wifi_start */
+#define ESP_ERR_WIFI_NOT_STOPPED  (ESP_ERR_WIFI_BASE + 3)   /*!< WiFi driver was not stopped by esp_wifi_stop */
+#define ESP_ERR_WIFI_IF           (ESP_ERR_WIFI_BASE + 4)   /*!< WiFi interface error */
+#define ESP_ERR_WIFI_MODE         (ESP_ERR_WIFI_BASE + 5)   /*!< WiFi mode error */
+#define ESP_ERR_WIFI_STATE        (ESP_ERR_WIFI_BASE + 6)   /*!< WiFi internal state error */
+#define ESP_ERR_WIFI_CONN         (ESP_ERR_WIFI_BASE + 7)   /*!< WiFi internal control block of station or soft-AP error */
+#define ESP_ERR_WIFI_NVS          (ESP_ERR_WIFI_BASE + 8)   /*!< WiFi internal NVS module error */
+#define ESP_ERR_WIFI_MAC          (ESP_ERR_WIFI_BASE + 9)   /*!< MAC address is invalid */
+#define ESP_ERR_WIFI_SSID         (ESP_ERR_WIFI_BASE + 10)  /*!< SSID is invalid */
+#define ESP_ERR_WIFI_PASSWORD     (ESP_ERR_WIFI_BASE + 11)  /*!< Password is invalid */
+#define ESP_ERR_WIFI_TIMEOUT      (ESP_ERR_WIFI_BASE + 12)  /*!< Timeout error */
+#define ESP_ERR_WIFI_WAKE_FAIL    (ESP_ERR_WIFI_BASE + 13)  /*!< WiFi is in sleep state(RF closed) and wakeup fail */
+#define ESP_ERR_WIFI_WOULD_BLOCK  (ESP_ERR_WIFI_BASE + 14)  /*!< The caller would block */
+#define ESP_ERR_WIFI_NOT_CONNECT  (ESP_ERR_WIFI_BASE + 15)  /*!< Station still in disconnect status */
+#define ESP_ERR_WIFI_PM_MODE_OPEN (ESP_ERR_WIFI_BASE + 18)  /*!< Wifi is in min/max modem sleep mode */
+#define ESP_ERR_WIFI_FPM_MODE     (ESP_ERR_WIFI_BASE + 19)  /*!< Have not enable fpm mode */
 
 #define ESP_WIFI_PARAM_USE_NVS  0
 
+#define WIFI_PROTOCAL_11B  1
+#define WIFI_PROTOCAL_11G  2
+#define WIFI_PROTOCAL_11N  4
 /**
  * @brief WiFi stack configuration parameters passed to esp_wifi_init call.
  */
 typedef struct {
-    system_event_handler_t event_handler;          /**< WiFi event handler */
-    wifi_osi_funcs_t*      osi_funcs;              /**< WiFi OS functions */
-    int                    static_rx_buf_num;      /**< WiFi static RX buffer number */
-    int                    dynamic_rx_buf_num;     /**< WiFi dynamic RX buffer number */
-    int                    tx_buf_type;            /**< WiFi TX buffer type */
-    int                    static_tx_buf_num;      /**< WiFi static TX buffer number */
-    int                    dynamic_tx_buf_num;     /**< WiFi dynamic TX buffer number */
-    int                    csi_enable;             /**< WiFi channel state information enable flag */
-    int                    ampdu_rx_enable;        /**< WiFi AMPDU RX feature enable flag */
-    int                    ampdu_tx_enable;        /**< WiFi AMPDU TX feature enable flag */
-    int                    nvs_enable;             /**< WiFi NVS flash enable flag */
-    int                    nano_enable;            /**< Nano option for printf/scan family enable flag */
-    int                    tx_ba_win;              /**< WiFi Block Ack TX window size */
-    int                    rx_ba_win;              /**< WiFi Block Ack RX window size */
-    int                    magic;                  /**< WiFi init magic number, it should be the last field */
+    system_event_handler_t event_handler;           /**< WiFi event handler */
+    void*                  osi_funcs;               /**< WiFi OS functions */
+    uint8_t                qos_enable;              /**< WiFi QOS feature enable flag */
+    uint8_t                ampdu_rx_enable;         /**< WiFi AMPDU RX feature enable flag */
+    uint8_t                rx_ba_win;               /**< WiFi Block Ack RX window size */
+    uint8_t                rx_ampdu_buf_num;        /**< WiFi AMPDU RX buffer number */
+    uint32_t               rx_ampdu_buf_len;        /**< WiFi AMPDU RX buffer length */
+    uint32_t               rx_max_single_pkt_len;   /**< WiFi RX max single packet size */
+    uint32_t               rx_buf_len;              /**< WiFi RX buffer size */
+    uint8_t                amsdu_rx_enable;         /**< WiFi AMSDU RX feature enable flag */
+    uint8_t                rx_buf_num;              /**< WiFi RX buffer number */
+    uint8_t                rx_pkt_num;              /**< WiFi RX packet number */
+    uint8_t                left_continuous_rx_buf_num; /**< WiFi Rx left continuous rx buffer number */
+    uint8_t                tx_buf_num;              /**< WiFi TX buffer number */
+    uint8_t                nvs_enable;              /**< WiFi NVS flash enable flag */
+    uint8_t                nano_enable;             /**< Nano option for printf/scan family enable flag */
+    uint32_t               magic;                 /**< WiFi init magic number, it should be the last field */
 } wifi_init_config_t;
+
+#if CONFIG_ESP8266_WIFI_AMPDU_RX_ENABLED
+#define WIFI_AMPDU_RX_ENABLED         1
+#define WIFI_AMPDU_RX_BA_WIN CONFIG_ESP8266_WIFI_RX_BA_WIN_SIZE
+#define WIFI_RX_MAX_SINGLE_PKT_LEN    1600
+#else
+#define WIFI_AMPDU_RX_ENABLED         0
+#define WIFI_AMPDU_RX_BA_WIN          0 /* unused if ampdu_rx_enable == false */
+#define WIFI_RX_MAX_SINGLE_PKT_LEN    (1600 - 524)
+#endif
+#define WIFI_AMPDU_RX_AMPDU_BUF_LEN   256
+#define WIFI_AMPDU_RX_AMPDU_BUF_NUM   5
+#define WIFI_HW_RX_BUFFER_LEN         524
+
+#if CONFIG_ESP8266_WIFI_QOS_ENABLED
+#define WIFI_QOS_ENABLED        1
+#else
+#define WIFI_QOS_ENABLED        0
+#endif
+
+#if CONFIG_ESP8266_WIFI_AMSDU_ENABLED
+#define WIFI_AMSDU_RX_ENABLED        1
+#undef WIFI_RX_MAX_SINGLE_PKT_LEN
+#define WIFI_RX_MAX_SINGLE_PKT_LEN   3000
+#else
+#define WIFI_AMSDU_RX_ENABLED        0
+#endif
+
+#if CONFIG_ESP8266_WIFI_NVS_ENABLED
+#define WIFI_NVS_ENABLED          1
+#else
+#define WIFI_NVS_ENABLED          0
+#endif
 
 #define WIFI_INIT_CONFIG_MAGIC    0x1F2F3F4F
 
-extern wifi_osi_funcs_t s_wifi_osi_funcs;
 #define WIFI_INIT_CONFIG_DEFAULT() { \
     .event_handler = &esp_event_send, \
-    .osi_funcs = &s_wifi_osi_funcs, \
-    .static_rx_buf_num = 5,\
-    .dynamic_rx_buf_num = 0,\
-    .tx_buf_type = 0,\
-    .static_tx_buf_num = 6,\
-    .dynamic_tx_buf_num = 0,\
-    .csi_enable = 0,\
-    .ampdu_rx_enable = 0,\
-    .ampdu_tx_enable = 0,\
-    .nvs_enable = 1,\
+    .osi_funcs = NULL, \
+    .qos_enable = WIFI_QOS_ENABLED,\
+    .ampdu_rx_enable = WIFI_AMPDU_RX_ENABLED,\
+    .rx_ba_win = WIFI_AMPDU_RX_BA_WIN,\
+    .rx_ampdu_buf_num = WIFI_AMPDU_RX_AMPDU_BUF_NUM,\
+    .rx_ampdu_buf_len = WIFI_AMPDU_RX_AMPDU_BUF_LEN,\
+    .rx_max_single_pkt_len = WIFI_RX_MAX_SINGLE_PKT_LEN,\
+    .rx_buf_len = WIFI_HW_RX_BUFFER_LEN,\
+    .amsdu_rx_enable = WIFI_AMSDU_RX_ENABLED,\
+    .rx_buf_num = CONFIG_ESP8266_WIFI_RX_BUFFER_NUM,\
+    .rx_pkt_num = CONFIG_ESP8266_WIFI_RX_PKT_NUM,\
+    .left_continuous_rx_buf_num = CONFIG_ESP8266_WIFI_LEFT_CONTINUOUS_RX_BUFFER_NUM,\
+    .tx_buf_num = CONFIG_ESP8266_WIFI_TX_PKT_NUM,\
+    .nvs_enable = WIFI_NVS_ENABLED,\
     .nano_enable = 0,\
-    .tx_ba_win = 0,\
-    .rx_ba_win = 0,\
     .magic = WIFI_INIT_CONFIG_MAGIC\
 };
 
@@ -386,10 +426,11 @@ esp_err_t esp_wifi_get_ps(wifi_ps_type_t *type);
 
 /**
   * @brief     Set protocol type of specified interface
-  *            The default protocol is (WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N)
+  *            The default protocol is (WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G)
   *
   * @attention Currently we only support 802.11b or 802.11bg or 802.11bgn mode
-  *
+  * @attention Please call this API in SYSTEM_EVENT_STA_START event
+  * 
   * @param     ifx  interfaces
   * @param     protocol_bitmap  WiFi protocol bitmap
   *
@@ -651,6 +692,31 @@ esp_err_t esp_wifi_get_promiscuous_filter(wifi_promiscuous_filter_t *filter);
 esp_err_t esp_wifi_set_config(wifi_interface_t interface, wifi_config_t *conf);
 
 /**
+  * @brief Enable subtype filter of the control packet in promiscuous mode.
+  *
+  * @note The default filter is to filter none control packet.
+  *
+  * @param filter the subtype of the control packet filtered in promiscuous mode.
+  *
+  * @return
+  *    - ESP_OK: succeed
+  *    - ESP_ERR_WIFI_NOT_INIT: WiFi is not initialized by esp_wifi_init
+  */
+esp_err_t esp_wifi_set_promiscuous_ctrl_filter(const wifi_promiscuous_filter_t *filter);
+
+/**
+  * @brief     Get the subtype filter of the control packet in promiscuous mode.
+  *
+  * @param[out] filter  store the current status of subtype filter of the control packet in promiscuous mode
+  *
+  * @return
+  *    - ESP_OK: succeed
+  *    - ESP_ERR_WIFI_NOT_INIT: WiFi is not initialized by esp_wifi_init
+  *    - ESP_ERR_WIFI_ARG: invalid argument
+  */
+esp_err_t esp_wifi_get_promiscuous_ctrl_filter(wifi_promiscuous_filter_t *filter);
+
+/**
   * @brief     Get configuration of specified interface
   *
   * @param     interface  interface
@@ -767,6 +833,7 @@ esp_err_t esp_wifi_set_vendor_ie_cb(esp_vendor_ie_cb_t cb, void *ctx);
 /**
   * @brief     Set maximum WiFi transmiting power
   *
+  * @attention Please Call this API after calling esp_wifi_start()
   * @attention WiFi transmiting power is divided to six levels in phy init data.
   *            Level0 represents highest transmiting power and level5 represents lowest
   *            transmiting power. Packets of different rates are transmitted in
@@ -778,18 +845,18 @@ esp_err_t esp_wifi_set_vendor_ie_cb(esp_vendor_ie_cb_t cb, void *ctx);
   *            whether to use phy init data in partition or not) will be used. Default
   *            value is level0. Values passed in power are mapped to transmit power
   *            levels as follows:
-  *            - [78, 127]: level0
-  *            - [76, 77]: level1
-  *            - [74, 75]: level2
-  *            - [68, 73]: level3
-  *            - [60, 67]: level4
-  *            - [52, 59]: level5
-  *            - [44, 51]: level5 - 2dBm
-  *            - [34, 43]: level5 - 4.5dBm
-  *            - [28, 33]: level5 - 6dBm
-  *            - [20, 27]: level5 - 8dBm
-  *            - [8, 19]: level5 - 11dBm
-  *            - [-128, 7]: level5 - 14dBm
+  *            - [82, 127]: level0
+  *            - [78,  81]: level1
+  *            - [74,  77]: level2
+  *            - [68,  73]: level3
+  *            - [64,  67]: level4
+  *            - [56,  63]: level5
+  *            - [49,  55]: level5 - 2dBm
+  *            - [33,  48]: level5 - 6dBm
+  *            - [25,  32]: level5 - 8dBm
+  *            - [13,  24]: level5 - 11dBm
+  *            - [ 1,  12]: level5 - 14dBm
+  *            - [-128, 0]: level5 - 17.5dBm
   *
   * @param     power  Maximum WiFi transmiting power.
   *
@@ -799,6 +866,32 @@ esp_err_t esp_wifi_set_vendor_ie_cb(esp_vendor_ie_cb_t cb, void *ctx);
   *    - ESP_ERR_WIFI_NOT_START: WiFi is not started by esp_wifi_start
   */
 esp_err_t esp_wifi_set_max_tx_power(int8_t power);
+
+/**
+  * @brief     Adjust RF Tx Power according to VDD33; unit : 1/1024 V.
+  *
+  * @attention When TOUT pin is suspended, VDD33 can be got by esp_wifi_get_vdd33.
+  *            When TOUT pin is wired to external circuitry, esp_wifi_get_vdd33 can not be used.
+  * @attention This api only worked when it is called, please call this api every day or hour
+  *            according to power consumption.
+  *
+  * @param     vdd33 unit is 1/1024V, range [1900, 3300].
+  */
+void esp_wifi_set_max_tx_power_via_vdd33(uint16_t vdd33);
+
+/**
+  * @brief     Measure the power voltage of VDD3P3 pin 3 and 4; unit: 1/1024 V
+  *
+  * @attention esp_wifi_get_vdd33 can only be called when TOUT pin is suspended.
+  * @attention The 107th byte in esp_init_data_default.bin (0 ~ 127 bytes) is named as
+  *            vdd33_const. When TOUT pin is suspended, vdd33_const must be set as
+  *            0xFF, which is 255.
+  * @attention The return value of esp_wifi_get_vdd33 may be different in different Wi-Fi
+  *            modes, for example, in Modem-sleep mode or in normal Wi-Fi working mode.
+  *
+  * @return the power voltage of vdd33 pin 3 and 4
+  */
+uint16_t esp_wifi_get_vdd33(void);
 
 /**
   * @brief     Get maximum WiFi transmiting power
@@ -870,16 +963,19 @@ esp_err_t esp_wifi_get_event_mask(uint32_t *mask);
   *               the next packet is allowed to send. Otherwise, wifi_send_pkt_freedom
   *               will return fail.
   *
-  * @param     uint8 *buf : pointer of packet
-  * @param     uint16 len : packet length
-  * @param     bool sys_seq : follow the system's 802.11 packets sequence number or not,
-  *                           if it is true, the sequence number will be increased 1 every
-  *                           time a packet sent.
+  * @param     ifx        interface if the Wi-Fi mode is Station, the ifx should be WIFI_IF_STA. If the Wi-Fi
+  *                       mode is SoftAP, the ifx should be WIFI_IF_AP. If the Wi-Fi mode is Station+SoftAP, the 
+  *                       ifx should be WIFI_IF_STA or WIFI_IF_AP. If the ifx is wrong, the API returns ESP_ERR_WIFI_IF.
+  * @param     buffer     pointer of packet
+  * @param     len        packet length
+  * @param     en_sys_seq follow the system's 802.11 packets sequence number or not,
+  *                       if it is true, the sequence number will be increased 1 every
+  *                       time a packet sent.
   *
   * @return    ESP_OK, succeed;
   * @return    ESP_FAIL, fail.
   */
-esp_err_t esp_wifi_send_pkt_freedom(uint8_t *buf, int32_t len, bool sys_seq); 
+esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 
 #ifdef __cplusplus
 }

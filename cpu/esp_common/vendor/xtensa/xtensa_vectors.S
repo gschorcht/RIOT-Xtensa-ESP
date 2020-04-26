@@ -96,6 +96,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* Enable stack backtrace across exception/interrupt - see below */
 #define XT_DEBUG_BACKTRACE    1
 
+#define PANIC_STK_FRMSZ       (XT_STK_FRMSZ + 0x10)
+
 /*
 --------------------------------------------------------------------------------
   Defines used to access _xtos_interrupt_table.
@@ -390,7 +392,7 @@ Debug Exception.
 _DebugExceptionVector:
     /*
      * Please note that this code will be overwritten with
-     *      
+     *
      *      xsr a2, excsave2
      *      jx  a2
      *
@@ -595,6 +597,14 @@ _LoadStoreErrorHandler:
     movi    a3, 0x00700F    # opcode mask for l8ui/l16si/l16ui
     src     a2, a2, a4      # a2 now instruction that failed
     and     a3, a2, a3      # a3 is masked instruction
+
+    # This is store instruction
+    movi   a4, 0x004002
+    beq    a3, a4, .LSE_check_s8i_store         # s8i
+
+    movi    a4, 0x005002
+    beq     a3, a4, .LSE_check_s16i_store       # s16i
+
     bnei    a3, 0x000002, .LSE_check_l16
 
     /* Note: At this point, opcode could technically be one of two things:
@@ -698,30 +708,137 @@ _LoadStoreErrorHandler:
     or      a4, a3, a4      # set 32-bit sign bits
     j       .LSE_post_fetch
 
+    .balign 4
+.LSE_check_s8i_store:
+    s32i    a5, sp, 0x14
+    s32i    a6, sp, 0x18
+    movi    a5,0xff
+    j       .LSE_check_store
+
+.LSE_check_s16i_store:
+    s32i    a5, sp, 0x14
+    s32i    a6, sp, 0x18
+    movi    a5, 0xffff
+    j       .LSE_check_store
+
+.LSE_check_store:
+    movi    a4, ~3
+    rsr     a3, excvaddr        # write faulting address
+    and     a4, a3, a4          # a4 now word aligned write address
+    ssa8b   a3
+    l32i    a3, a4, 0         # perform the actual read
+
+    mov     a4, a5
+    sll     a4, a4
+    movi    a6, -1
+    xor     a4, a6, a4
+    and     a3, a3, a4
+
+    movi    a4, ~3
+    rsr     a6, excvaddr       # write faulting address
+    and     a4, a6, a4         # a4 now word aligned write address
+
+    extui   a2, a2, 4, 4     # a2 is now destination register 0-15 times 2
+
+    bgei    a2, 7,  .LSE_big_reg
+    movi    a6, 4
+    mull    a6, a2, a6
+    add     a2, a6, sp
+    l32i    a2, a2, 0
+    j       .Write_data
+
+.LSE_big_reg:
+    movi    a6, 7
+    sub     a2, a2, a6
+    movi    a6, 8
+    mull    a2, a2, a6
+
+    movi    a6,.LSE_big_reg_table
+    add     a2, a2, a6
+    jx      a2
+
+.balign 4
+.LSE_big_reg_table:
+    .org    .LSE_big_reg_table + (0*(2*4))
+    mov     a2, a7
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (1*(2*4))
+    mov     a2, a8
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (2*(2*4))
+    mov     a2, a9
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (3*(2*4))
+    mov     a2, a10
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (4*(2*4))
+    mov     a2, a11
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (5*(2*4))
+    mov     a2, a12
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (6*(2*4))
+    mov     a2, a13
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (7*(2*4))
+    mov     a2, a14
+    j       .Write_data
+
+    .org    .LSE_big_reg_table + (8*(2*4))
+    mov     a2, a15
+    j       .Write_data
+
+.Write_data:
+    and     a2, a2, a5
+    sll     a2, a2
+    or      a3, a3, a2
+
+    s32i    a3, a4, 0
+
+    rsr     a3, epc1
+    wsr     a0, sar
+    addi    a3, a3, 0x3
+    wsr     a3, epc1
+
+    /* Restore all regs and return */
+    l32i    a0, sp, 0
+    l32i    a2, sp, 0x08
+    l32i    a3, sp, 0x0c
+    l32i    a4, sp, 0x10
+    l32i    a5, sp, 0x14
+    l32i    a6, sp, 0x18
+    rsr     a1, excsave1    # restore a1 saved by UserExceptionVector
+    rfe
+
 .LSE_wrong_opcode:
     /* If we got here it's not an opcode we can try to fix, so bomb out.
      * Restore registers so any dump the fatal exception routine produces
      * will have correct values */
     wsr     a0, sar
     l32i    a0, sp, 0
-    /*l32i    a2, sp, 0x08*/
+    l32i    a2, sp, 0x08
     l32i    a3, sp, 0x0c
     l32i    a4, sp, 0x10
     rsr     a1, excsave1
-    mov     a2, a1
-    movi    a3, 0
-    call0   fatal_exception_handler
+    call0   _xt_panic
 
     .balign 4
 .LSE_assign_a1:
     /* a1 is saved in excsave1, so just update that with the value, */
-    wsr     a4, excsave1
+    s32i    a4, sp, 0x04
     /* Then restore all regs and return */
     l32i    a0, sp, 0
     l32i    a2, sp, 0x08
     l32i    a3, sp, 0x0c
     l32i    a4, sp, 0x10
-    rsr     a1, excsave1
+    l32i    a1, sp, 0x04
     rfe
 
     .balign 4

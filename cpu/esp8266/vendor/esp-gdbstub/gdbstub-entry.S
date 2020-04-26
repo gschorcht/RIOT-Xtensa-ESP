@@ -296,7 +296,6 @@ gdbstub_icount_ena_single_step:
  */
 gdbstub_set_hw_breakpoint:
 
-call0 40000080
     rsr     a4, IBREAKENABLE
     bbsi    a4, 0, return_w_error
     wsr     a2, IBREAKA

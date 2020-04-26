@@ -15,9 +15,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef RIOT_VERSION
 #include "esp_heap_caps.h"
+#endif
 #include "esp_log.h"
 #include "esp_system.h"
+#include "internal/esp_system_internal.h"
 
 #include "crc.h"
 
@@ -32,6 +35,11 @@
 static const char* TAG = "system_api";
 
 static uint8_t base_mac_addr[6] = { 0 };
+
+// Bootloader can get this information
+const __attribute__((section(".SystemInfoVector.text"))) esp_sys_info_t g_esp_sys_info = {
+    .version = ESP_IDF_VERSION
+};
 
 esp_err_t esp_base_mac_addr_set(uint8_t *mac)
 {
@@ -212,7 +220,7 @@ static esp_err_t load_backup_mac_data(uint8_t *mac)
     return ESP_OK;
 }
 
-static esp_err_t store_backup_mac_data(void)
+static esp_err_t store_backup_mac_data()
 {
     esp_err_t err;
     nvs_handle handle;
@@ -355,3 +363,11 @@ uint32_t esp_get_minimum_free_heap_size(void)
     return heap_caps_get_minimum_free_size(MALLOC_CAP_32BIT);
 }
 #endif /* MODULE_ESP_IDF_HEAP */
+
+/**
+ * @brief Get old SDK configuration parameters base address
+ */
+uint32_t esp_get_old_sysconf_addr(void)
+{
+    return rtc_sys_info.old_sysconf_addr;
+}

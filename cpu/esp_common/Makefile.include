@@ -72,7 +72,7 @@ CFLAGS += $(if $(findstring qio,$(FLASH_MODE)),-DFLASH_MODE_QIO=1)
 CFLAGS += $(if $(findstring dio,$(FLASH_MODE)),-DFLASH_MODE_DIO=1)
 CFLAGS += $(if $(findstring dout,$(FLASH_MODE)),-DFLASH_MODE_DOUT=1)
 
-BASELIBS += -lhal -lg -lc
+BASELIBS += -lhal -lc
 
 LINKFLAGS += $(CFLAGS_OPT) $(CFLAGS_DBG)
 LINKFLAGS += -L$(ESP_SDK_DIR)/components/$(CPU)

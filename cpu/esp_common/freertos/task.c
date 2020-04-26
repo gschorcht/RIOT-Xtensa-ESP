@@ -8,8 +8,6 @@
  * FreeRTOS to RIOT-OS adaption module for source code compatibility
  */
 
-#ifndef DOXYGEN
-
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
@@ -131,8 +129,9 @@ TaskHandle_t xTaskGetCurrentTaskHandle(void)
 void vTaskDelay( const TickType_t xTicksToDelay )
 {
     DEBUG("%s xTicksToDelay=%d\n", __func__, xTicksToDelay);
-#if defined(MODULE_ESP_WIFI_ANY)
-    uint64_t us = xTicksToDelay * MHZ / xPortGetTickRateHz();
+#if defined(MODULE_ESP_WIFI_ANY) && !defined(MCU_ESP8266) 
+    /* TODO crashes on ESP8266 */
+    uint32_t us = (uint64_t)xTicksToDelay * MHZ / xPortGetTickRateHz();
     xtimer_usleep(us);
 #endif
 }
@@ -146,6 +145,7 @@ void vTaskEnterCritical( portMUX_TYPE *mux )
 {
 #ifdef MCU_ESP8266
     /* we have to return on NMI */
+    extern char NMIIrqIsOn;
     if (NMIIrqIsOn) {
         return;
     }
@@ -183,6 +183,7 @@ void vTaskExitCritical( portMUX_TYPE *mux )
 {
 #ifdef MCU_ESP8266
     /* we have to return on NMI */
+    extern char NMIIrqIsOn;
     if (NMIIrqIsOn) {
         return;
     }
@@ -230,4 +231,20 @@ TickType_t prvGetExpectedIdleTime(void)
     return 0;
 }
 
-#endif /* DOXYGEN */
+extern int thread_yield_disabled;
+extern int thread_yield_pending;
+
+void vTaskSuspendAll(void)
+{
+    thread_yield_disabled++;
+}
+
+BaseType_t xTaskResumeAll(void)
+{
+    if (thread_yield_disabled && (--thread_yield_disabled == 0)
+                              && thread_yield_pending) {
+        thread_yield_pending = 0;
+        return pdTRUE;
+    }
+    return pdFALSE;
+}

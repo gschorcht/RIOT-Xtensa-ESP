@@ -152,8 +152,8 @@ RTOS may optionally define XT_TICK_PER_SEC in its own way (eg. macro).
 */
 // void XT_RTOS_TIMER_INT(void)
 #define XT_RTOS_TIMER_INT   _frxt_timer_int
-#ifndef RIOT_VERSION
-    #define XT_TICK_PER_SEC     configTICK_RATE_HZ
+#ifndef XT_TICK_PER_SEC
+#define XT_TICK_PER_SEC     CONFIG_FREERTOS_HZ
 #endif
 
 /*

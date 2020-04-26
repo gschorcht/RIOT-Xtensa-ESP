@@ -24,6 +24,10 @@
 #include "lwip/ip_addr.h"
 #include "tcpip_adapter.h"
 #endif
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,6 +134,13 @@ typedef struct {
     uint8_t mac[6];           /**< MAC address of the station which send probe request */
 } system_event_ap_probe_req_rx_t;
 
+#ifndef RIOT_VERSION
+/** Event structure for IP_EVENT_AP_STAIPASSIGNED event */
+typedef struct {
+    ip4_addr_t ip; /*!< IP address which was assigned to the station */
+} system_event_ap_staipassigned_t;
+#endif
+
 typedef union {
     system_event_sta_connected_t               connected;          /**< ESP8266 station connected to AP */
     system_event_sta_disconnected_t            disconnected;       /**< ESP8266 station disconnected to AP */
@@ -144,6 +155,7 @@ typedef union {
     system_event_ap_stadisconnected_t          sta_disconnected;   /**< a station disconnected to ESP8266 soft-AP */
     system_event_ap_probe_req_rx_t             ap_probereqrecved;  /**< ESP8266 soft-AP receive probe request packet */
 #ifndef RIOT_VERSION
+    system_event_ap_staipassigned_t            ap_staipassigned;   /**< ESP8266 soft-AP assign an IP to the station*/
     system_event_got_ip6_t                     got_ip6;            /**< ESP8266 station　or ap or ethernet ipv6 addr state change to preferred */
 #endif
 } system_event_info_t;
@@ -187,6 +199,17 @@ esp_err_t esp_event_process_default(system_event_t *event);
   *
   */
 void esp_event_set_default_wifi_handlers(void);
+
+/**
+ * @brief Create default event loop
+ *
+ * @return
+ *  - ESP_OK: Success
+ *  - ESP_ERR_NO_MEM: Cannot allocate memory for event loops list
+ *  - ESP_FAIL: Failed to create task loop
+ *  - Others: Fail
+ */
+esp_err_t esp_event_loop_create_default(void);
 
 #ifdef __cplusplus
 }

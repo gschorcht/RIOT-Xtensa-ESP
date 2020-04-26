@@ -147,7 +147,7 @@ editing this here or in xtensa_rtos.h, or compiling with xt-xcc option
 */
 
 #ifndef XT_TICK_PER_SEC
-#define XT_TICK_PER_SEC    configTICK_RATE_HZ        /* 10 ms tick = 100 ticks per second */
+#define XT_TICK_PER_SEC     CONFIG_FREERTOS_HZ  /* 10 ms tick = 100 ticks per second */
 #endif
 
 /*

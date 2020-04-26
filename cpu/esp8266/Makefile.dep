@@ -13,11 +13,35 @@ USEMODULE += newlib
 USEMODULE += periph_common
 USEMODULE += ps
 
+ifneq (,$(filter esp_idf_heap,$(USEMODULE)))
+  USEMODULE += esp_idf_heap_port
+endif
+
+ifneq (,$(filter esp_wifi_enterprise,$(USEMODULE)))
+  # add additional modules used for WPA2 Enterprise mode
+  USEMODULE += esp_idf_wpa_supplicant_port
+  USEMODULE += esp_idf_wpa_supplicant_wpa2_eap_peer
+  USEMODULE += esp_idf_wpa_supplicant_wpa2_tls
+  USEMODULE += esp_idf_wpa_supplicant_wpa2_utils
+endif
+
 ifneq (,$(filter periph_i2c,$(USEMODULE)))
   USEMODULE += esp_i2c_sw
   USEMODULE += periph_i2c_sw
 endif
 
+ifneq (,$(filter pm_layered,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_rtt
+endif
+
 ifneq (,$(filter periph_rtc,$(USEMODULE)))
   USEMODULE += rtt_rtc
+endif
+
+ifneq (,$(filter periph_rtt,$(USEMODULE)))
+  ifneq (,$(filter esp_wifi_any,$(USEMODULE)))
+    USEMODULE += periph_rtt_hw_sys
+  else
+    USEMODULE += periph_rtt_hw_frc
+  endif
 endif

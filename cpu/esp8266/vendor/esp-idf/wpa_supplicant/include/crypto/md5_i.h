@@ -15,19 +15,19 @@
 #ifndef MD5_I_H
 #define MD5_I_H
 
-struct MD5Context {
-        u32 buf[4];
-        u32 bits[2];
-        u8 in[64];
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct MD5Context {
+	u32 buf[4];
+	u32 bits[2];
+	u8 in[64];
+};
+
 void wpa_MD5Init(struct MD5Context *context);
 void wpa_MD5Update(struct MD5Context *context, unsigned char const *buf,
-                   unsigned len);
+	       unsigned len);
 void wpa_MD5Final(unsigned char digest[16], struct MD5Context *context);
 
 #ifdef __cplusplus

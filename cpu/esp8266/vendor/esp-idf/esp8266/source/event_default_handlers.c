@@ -334,7 +334,6 @@ static esp_err_t esp_system_event_debug(system_event_t *event)
     }
 #endif
 
-    
     default: {
         ESP_LOGW(TAG, "unexpected system event %d!", event->event_id);
         break;
@@ -365,7 +364,7 @@ esp_err_t esp_event_process_default(system_event_t *event)
     return ESP_OK;
 }
 
-void esp_event_set_default_wifi_handlers(void)
+void esp_event_set_default_wifi_handlers()
 {
      default_event_handlers[SYSTEM_EVENT_STA_START]        = system_event_sta_start_handle_default;
      default_event_handlers[SYSTEM_EVENT_STA_STOP]         = system_event_sta_stop_handle_default;

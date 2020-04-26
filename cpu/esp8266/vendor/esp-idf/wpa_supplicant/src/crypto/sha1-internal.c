@@ -20,10 +20,12 @@
 #include "crypto/md5.h"
 #include "crypto/crypto.h"
 
+#ifndef CONFIG_ESP_SHA
 typedef struct SHA1Context SHA1_CTX;
 
 void wpa_SHA1Transform(u32 state[5], const unsigned char buffer[64]);
 
+#endif
 
 /**
  * sha1_vector - SHA-1 hash for data vector
@@ -47,6 +49,7 @@ wpa_sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 }
 
 
+#ifndef CONFIG_ESP_SHA
 /* ===== start - public domain SHA1 implementation ===== */
 
 /*
@@ -113,7 +116,7 @@ Minor changes to match the coding style used in Dynamics.
 
 Modified September 24, 2004
 By Jouni Malinen <j@w1.fi>
-Fixed alignment issue in wpa_SHA1Transform when SHA1HANDSOFF is defined.
+Fixed alignment issue in SHA1Transform when SHA1HANDSOFF is defined.
 
 */
 
@@ -259,7 +262,7 @@ wpa_SHA1Update(SHA1_CTX* context, const void *_data, u32 len)
 	const unsigned char *data = _data;
 
 #ifdef VERBOSE
-	SHAPrintContext(context, "before");
+	wpa_SHAPrintContext(context, "before");
 #endif
 	j = (context->count[0] >> 3) & 63;
 	if ((context->count[0] += len << 3) < (len << 3))
@@ -276,7 +279,7 @@ wpa_SHA1Update(SHA1_CTX* context, const void *_data, u32 len)
 	else i = 0;
 	os_memcpy(&context->buffer[j], &data[i], len - i);
 #ifdef VERBOSE
-	SHAPrintContext(context, "after ");
+	wpa_SHAPrintContext(context, "after ");
 #endif
 }
 
@@ -303,7 +306,7 @@ wpa_SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 		index = 0;
 		wpa_SHA1Update(context, (unsigned char *)&index, 1);
 	}
-	wpa_SHA1Update(context, finalcount, 8);  /* Should cause a wpa_SHA1Transform()
+	wpa_SHA1Update(context, finalcount, 8);  /* Should cause a SHA1Transform()
 					      */
 	for (i = 0; i < 20; i++) {
 		digest[i] = (unsigned char)
@@ -320,3 +323,4 @@ wpa_SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 }
 
 /* ===== end - public domain SHA1 implementation ===== */
+#endif /* CONFIG_ESP_SHA */

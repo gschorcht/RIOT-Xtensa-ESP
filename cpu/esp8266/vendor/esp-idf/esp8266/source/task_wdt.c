@@ -16,10 +16,10 @@
 
 #include "esp_log.h"
 #include "esp_libc.h"
-#include "esp_wifi_osi.h"
 #include "esp_task_wdt.h"
 #include "portmacro.h"
 #include "esp8266/eagle_soc.h"
+#include "driver/soc.h"
 
 static const char *TAG = "wdt";
 
@@ -39,20 +39,23 @@ static void esp_task_wdt_isr(void *param)
     esp_task_wdt_reset();
 #else
     extern void panicHandler(void *frame, int wdt);
+    extern void *__wifi_task_top_sp(void);
 
-    panicHandler(osi_task_top_sp(), 1);
+    panicHandler(__wifi_task_top_sp(), 1);
 #endif
 }
+#endif
+
+#ifdef RIOT_VERSION
+typedef void (* _xt_isr)(void *arg);
+extern void _xt_isr_unmask(uint32_t unmask);
+extern void _xt_clear_ints(uint32_t mask);
+extern void _xt_isr_attach(uint8_t i, _xt_isr func, void *arg);
 #endif
 
 /**
   * @brief  Just for pass compiling and mark wdt calling line
   */
-typedef void (* _xt_isr)(void *arg);
-extern void _xt_isr_unmask(uint32_t unmask);
-extern void _xt_clear_ints(uint32_t mask);
-extern void _xt_isr_attach(uint8_t i, _xt_isr func, void *arg);
-
 esp_err_t esp_task_wdt_init(void)
 {
     CLEAR_WDT_REG_MASK(WDT_CTL_ADDRESS, BIT0);
@@ -61,7 +64,7 @@ esp_err_t esp_task_wdt_init(void)
     const uint32_t panic_time_param = 11;
 
     // Just for soft restart
-    _xt_clear_ints(1 << ETS_WDT_INUM);
+    soc_clear_int_mask(1 << ETS_WDT_INUM);
 
     _xt_isr_attach(ETS_WDT_INUM, esp_task_wdt_isr, NULL);
     _xt_isr_unmask(1 << ETS_WDT_INUM);

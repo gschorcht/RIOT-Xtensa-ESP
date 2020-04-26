@@ -210,6 +210,10 @@ char* thread_stack_init(thread_task_func_t task_func, void *arg, void *stack_sta
 
 #ifdef MCU_ESP8266
 extern int MacIsrSigPostDefHdl(void);
+
+extern void ets_nmi_lock(void);
+extern void ets_nmi_unlock(void);
+
 unsigned int ets_soft_int_type = ETS_SOFT_INT_NONE;
 #endif
 
@@ -221,7 +225,7 @@ unsigned int ets_soft_int_type = ETS_SOFT_INT_NONE;
 void IRAM_ATTR thread_yield_isr(void* arg)
 {
 #ifdef MCU_ESP8266
-    ETS_NMI_LOCK();
+    ets_nmi_lock();
 
     if (ets_soft_int_type == ETS_SOFT_INT_HDL_MAC) {
         ets_soft_int_type = MacIsrSigPostDefHdl() ? ETS_SOFT_INT_YIELD
@@ -237,7 +241,7 @@ void IRAM_ATTR thread_yield_isr(void* arg)
         _frxt_setup_switch();
     }
 
-    ETS_NMI_UNLOCK();
+    ets_nmi_unlock();
 #else
     /* clear the interrupt first */
     DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, 0);
@@ -247,6 +251,18 @@ void IRAM_ATTR thread_yield_isr(void* arg)
     _frxt_setup_switch();
 #endif
 }
+
+/**
+ * FreeRTOS functions vTaskSuspendAll and xTaskResumeAll may be used by ESP
+ * SDKs. vTaskSuspendAll prevents a context switch but leaves interrupts
+ * enabled. To simulate this functionality a counter is set which is
+ * incremented in vTaskSuspendAll and decremented in xTaskResumeAll. Context
+ * switches are only be allowed if the counter is 0.
+ */
+int thread_yield_disabled = 0;
+
+/* counts the number of pending thread_yield_higher calls */
+int thread_yield_pending = 0;
 
 /**
  * If we are already in an interrupt handler, the function simply sets the
@@ -259,6 +275,12 @@ void IRAM_ATTR thread_yield_higher(void)
 {
     /* reset hardware watchdog */
     system_wdt_feed();
+
+    /* return if context switching is disabled */
+    if (thread_yield_disabled) {
+        thread_yield_pending++;
+        return;
+    }
 
     /* yield next task */
     #if defined(ENABLE_DEBUG) && defined(DEVELHELP)

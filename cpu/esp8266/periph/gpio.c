@@ -36,17 +36,31 @@
 #include "esp/rtc_regs.h"
 
 #include "esp_common.h"
+#include "esp_sleep.h"
 #include "gpio_arch.h"
 #include "irq_arch.h"
 #include "syscalls.h"
+
+#define GPIO_CONF(i)    (*(gpio_conf_reg_t *)(&GPIO.CONF[i]))
+
+/* GPIO pin config register struct for easier access to the register fields */
+typedef struct {
+    uint32_t source:        1;
+    uint32_t reserved1:     1;
+    uint32_t driver:        1;
+    uint32_t reserved2:     4;
+    uint32_t int_type:      3;
+    uint32_t wakeup_enable: 1;
+    uint32_t reserved3:     21;
+} gpio_conf_reg_t;
 
 /*
  * IOMUX to GPIO mapping
  * source https://www.espressif.com/sites/default/files/documentation/0d-esp8266_pin_list_release_15-11-2014.xlsx
  */
 
-const uint8_t _gpio_to_iomux[]   = { 12, 5, 13, 4, 14, 15, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3 };
-const uint8_t _iomux_to_gpio[]   = { 12, 13, 14, 15, 3, 1, 6, 7, 8, 9, 10, 11, 0, 2, 4, 5 };
+const uint8_t _gpio_to_iomux[] = { 12, 5, 13, 4, 14, 15, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3 };
+const uint8_t _iomux_to_gpio[] = { 12, 13, 14, 15, 3, 1, 6, 7, 8, 9, 10, 11, 0, 2, 4, 5 };
 
 gpio_pin_usage_t _gpio_pin_usage [GPIO_PIN_NUMOF] =
 {
@@ -174,6 +188,7 @@ int gpio_init(gpio_t pin, gpio_mode_t mode)
 #ifdef MODULE_PERIPH_GPIO_IRQ
 static gpio_isr_ctx_t gpio_isr_ctx_table [GPIO_PIN_NUMOF] = { };
 static bool gpio_int_enabled_table [GPIO_PIN_NUMOF] = { };
+extern uint32_t pm_wakeup_reason;
 
 void IRAM gpio_int_handler (void* arg)
 {
@@ -184,6 +199,7 @@ void IRAM gpio_int_handler (void* arg)
         uint32_t mask = BIT(i);
 
         if (GPIO.STATUS & mask) {
+            pm_wakeup_reason = ESP_SLEEP_WAKEUP_GPIO;
             GPIO.STATUS_CLEAR = mask;
             if (gpio_int_enabled_table[i] && (GPIO.CONF[i] & GPIO_PIN_INT_TYPE_MASK)) {
                 gpio_isr_ctx_table[i].cb (gpio_isr_ctx_table[i].arg);
@@ -212,9 +228,11 @@ int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
 
     GPIO.CONF[pin] = SET_FIELD(GPIO.CONF[pin], GPIO_CONF_INTTYPE, flank);
     if (flank != GPIO_NONE) {
-        gpio_int_enabled_table [pin] = (gpio_isr_ctx_table[pin].cb != NULL);
-        ets_isr_attach (ETS_GPIO_INUM, gpio_int_handler, 0);
-        ets_isr_unmask ((1 << ETS_GPIO_INUM));
+        GPIO_CONF(pin).int_type = flank;
+        GPIO_CONF(pin).wakeup_enable = 1;
+        gpio_int_enabled_table[pin] = (gpio_isr_ctx_table[pin].cb != NULL);
+        ets_isr_attach(ETS_GPIO_INUM, gpio_int_handler, 0);
+        ets_isr_unmask((1 << ETS_GPIO_INUM));
     }
 
     return 0;
@@ -235,7 +253,7 @@ void gpio_irq_disable (gpio_t pin)
 }
 #endif /* MODULE_PERIPH_GPIO_IRQ */
 
-int gpio_read (gpio_t pin)
+int IRAM_ATTR gpio_read (gpio_t pin)
 {
     CHECK_PARAM_RET(pin < GPIO_PIN_NUMOF, -1);
 
@@ -247,7 +265,7 @@ int gpio_read (gpio_t pin)
     return (GPIO.IN & BIT(pin)) ? 1 : 0;
 }
 
-void gpio_write (gpio_t pin, int value)
+void IRAM_ATTR gpio_write (gpio_t pin, int value)
 {
     DEBUG("%s: %d %d\n", __func__, pin, value);
 
@@ -267,17 +285,17 @@ void gpio_write (gpio_t pin, int value)
     }
 }
 
-void gpio_set (gpio_t pin)
+void IRAM_ATTR gpio_set (gpio_t pin)
 {
     gpio_write (pin, 1);
 }
 
-void gpio_clear (gpio_t pin)
+void IRAM_ATTR gpio_clear (gpio_t pin)
 {
     gpio_write (pin, 0);
 }
 
-void gpio_toggle (gpio_t pin)
+void IRAM_ATTR gpio_toggle (gpio_t pin)
 {
     DEBUG("%s: %d\n", __func__, pin);
 
@@ -307,4 +325,60 @@ gpio_pin_usage_t gpio_get_pin_usage (gpio_t pin)
 const char* gpio_get_pin_usage_str(gpio_t pin)
 {
     return _gpio_pin_usage_str[_gpio_pin_usage[((pin < GPIO_PIN_NUMOF) ? pin : _NOT_EXIST)]];
+}
+
+#if MODULE_PERIPH_GPIO_IRQ
+static uint32_t gpio_int_saved_type[GPIO_PIN_NUMOF];
+#endif
+
+void gpio_pm_sleep_enter(unsigned mode)
+{
+#if MODULE_PERIPH_GPIO_IRQ
+    if (mode == ESP_PM_LIGHT_SLEEP) {
+        extern esp_err_t esp_sleep_enable_gpio_wakeup(void);
+        esp_sleep_enable_gpio_wakeup();
+
+        for (unsigned i = 0; i < GPIO_PIN_NUMOF; i++) {
+            if (i == GPIO16) {
+                continue;
+            }
+
+            if (gpio_int_enabled_table[i] && GPIO_CONF(i).int_type) {
+                gpio_int_saved_type[i] = GPIO_CONF(i).int_type;
+                switch (GPIO_CONF(i).int_type) {
+                    case GPIO_FALLING:
+                        GPIO_CONF(i).int_type = GPIO_LOW;
+                        DEBUG("%s gpio=%u GPIO_LOW\n", __func__, i);
+                        break;
+                    case GPIO_RISING:
+                        GPIO_CONF(i).int_type = GPIO_HIGH;
+                        DEBUG("%s gpio=%u GPIO_HIGH\n", __func__, i);
+                        break;
+                    case GPIO_BOTH:
+                        DEBUG("%s gpio=%u GPIO_BOTH not supported\n",
+                               __func__, i);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+#endif
+}
+
+void gpio_pm_sleep_exit(uint32_t cause)
+{
+    (void)cause;
+#if MODULE_PERIPH_GPIO_IRQ
+    DEBUG("%s\n", __func__);
+    for (unsigned i = 0; i < GPIO_PIN_NUMOF; i++) {
+        if (i == GPIO16) {
+            continue;
+        }
+        if (gpio_int_enabled_table[i]) {
+            GPIO_CONF(i).int_type = gpio_int_saved_type[i];
+        }
+    }
+#endif
 }

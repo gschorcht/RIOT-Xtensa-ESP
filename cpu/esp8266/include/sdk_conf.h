@@ -26,7 +26,7 @@
 
 #ifndef DOXYGEN
 
-#include "board.h"
+#include "esp_attr.h"
 #include "esp_image_format.h"
 
 #ifdef __cplusplus
@@ -38,10 +38,17 @@ extern "C" {
  *
  * Determined with `git describe --tags` in `$ESP8266_SDK_DIR`
  */
-#define IDF_VER     "v3.1-4-g08c234e"
+#define IDF_VER     "v3.2-311-gfe502cc0"
 
 /**
- * @name Default console configuration
+ * @name    Common target definitions
+ */
+#define CONFIG_IDF_TARGET_ESP8266           (1)
+#define CONFIG_IDF_TARGET                   "esp8266"
+#define CONFIG_TARGET_PLATFORM              CONFIG_IDF_TARGET
+
+/**
+ * @name    Default console configuration
  *
  * STDIO_UART_BAUDRATE is used as CONFIG_CONSOLE_UART_BAUDRATE and
  * can be overridden by an application specific configuration.
@@ -54,21 +61,26 @@ extern "C" {
 #endif
 /** @} */
 
+/**
+ * @brief   Log output configuration (DO NOT CHANGE)
+ */
+#ifndef CONFIG_LOG_DEFAULT_LEVEL
+#define CONFIG_LOG_DEFAULT_LEVEL        LOG_LEVEL
+#endif
+
+#define CONFIG_LOG_SET_LEVEL            (1)
+
 #define CONFIG_APP1_SIZE                (0xf0000)
 #define CONFIG_APP1_OFFSET              (0x10000)
 
 #define CONFIG_SOC_IRAM_SIZE            (0xc000)
 
+#define CONFIG_FREERTOS_HZ              (100)
 #define CONFIG_TASK_WDT_PANIC
 #define CONFIG_TASK_WDT_TIMEOUT_S       (15)
-#define CONFIG_RESET_REASON             (1)
 
-#define CONFIG_WIFI_PPT_TASKSTACK_SIZE  (3584)
 #define CONFIG_MAIN_TASK_STACK_SIZE     (2048)
 #define CONFIG_EVENT_LOOP_STACK_SIZE    (2048)
-
-#define CONFIG_ESP_PHY_CALIBRATION_AND_DATA_STORAGE
-#define CONFIG_ESP_PHY_INIT_DATA_IN_PARTITION       (0)
 
 #define CONFIG_SPI_FLASH_FREQ           (ESP_IMAGE_SPI_SPEED_40M) /* 40 MHz */
 #define CONFIG_SPI_FLASH_MODE           (ESP_IMAGE_SPI_MODE_DIO)  /* DIO mode */
@@ -76,7 +88,35 @@ extern "C" {
 
 #define CONFIG_SCAN_AP_MAX              (32)
 
-#define CONFIG_USING_NEW_ETS_VPRINTF
+#define CONFIG_USING_NEW_ETS_VPRINTF        (1)
+#define CONFIG_NEWLIB_STDOUT_LINE_ENDING_LF (1)
+#define CONFIG_NEWLIB_LIBRARY_CUSTOMER      (1)
+
+#define CONFIG_RESET_REASON                 (1)
+#define CONFIG_RESET_REASON_CHECK_WAKEUP    (1)
+
+/**
+ * Wi-Fi driver configuration (DO NOT CHANGE)
+ */
+#define CONFIG_WIFI_PPT_TASKSTACK_SIZE                          (2048)
+#define CONFIG_WIFI_TX_RATE_SEQUENCE_FROM_HIGH                  (1)
+#define CONFIG_ESP8266_WIFI_RX_BUFFER_NUM                       (16)
+#define CONFIG_ESP8266_WIFI_LEFT_CONTINUOUS_RX_BUFFER_NUM       (4)
+#define CONFIG_ESP8266_WIFI_RX_PKT_NUM                          (7)
+#define CONFIG_ESP8266_WIFI_TX_PKT_NUM                          (6)
+#define CONFIG_ESP8266_WIFI_CONNECT_OPEN_ROUTER_WHEN_PWD_IS_SET (1)
+#if MODULE_ESP_IDF_NVS_ENABLED
+#define CONFIG_ESP8266_WIFI_NVS_ENABLED                         (1)
+#endif
+
+/**
+ * PHY configuration (DO NOT CHANGE)
+ */
+#define CONFIG_ESP8266_PHY_MAX_TX_POWER             (20)
+#define CONFIG_ESP8266_PHY_MAX_WIFI_TX_POWER        (20)
+#define CONFIG_ESP8266_PHY_INIT_DATA_IN_PARTITION   (0)
+#define CONFIG_ESP_PHY_CALIBRATION_AND_DATA_STORAGE (0)
+#define CONFIG_ESP_PHY_INIT_DATA_VDD33_CONST        (33)
 
 #ifdef __cplusplus
 }

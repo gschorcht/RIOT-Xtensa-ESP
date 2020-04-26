@@ -48,9 +48,15 @@ extern "C" {
 
 #define portNUM_PROCESSORS              1
 #define xPortGetCoreID()                PRO_CPU_NUM
+#define xtbsp_clock_freq_hz()           80000000
+
+extern const uint32_t g_esp_ticks_per_us;
+extern unsigned _xt_tick_divisor;
 
 #endif /* MCU_ESP32 */
 
+extern void vPortEnterCritical(void);
+extern void vPortExitCritical(void);
 extern void vTaskEnterCritical(portMUX_TYPE *mux);
 extern void vTaskExitCritical(portMUX_TYPE *mux);
 

@@ -15,11 +15,11 @@
 #ifndef AES_I_H
 #define AES_I_H
 
+#include "aes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "aes.h"
 
 /* #define FULL_UNROLL */
 #define AES_SMALL_TABLES

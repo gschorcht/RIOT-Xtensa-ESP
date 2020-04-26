@@ -19,10 +19,6 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Include possible build time configuration before including anything else */
 //#include "build_config.h"  //don't need anymore
 #ifndef __ets__
@@ -65,6 +61,10 @@ extern "C" {
 #include "rom/ets_sys.h"
 
 #endif /* !__ets__ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __cplusplus
 }

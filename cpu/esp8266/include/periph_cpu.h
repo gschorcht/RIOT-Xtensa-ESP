@@ -89,23 +89,23 @@ typedef enum {
  * @name   Predefined GPIO names
  * @{
  */
-#define GPIO0       (GPIO_PIN(PORT_GPIO,0))
-#define GPIO1       (GPIO_PIN(PORT_GPIO,1))
-#define GPIO2       (GPIO_PIN(PORT_GPIO,2))
-#define GPIO3       (GPIO_PIN(PORT_GPIO,3))
-#define GPIO4       (GPIO_PIN(PORT_GPIO,4))
-#define GPIO5       (GPIO_PIN(PORT_GPIO,5))
-#define GPIO6       (GPIO_PIN(PORT_GPIO,6))
-#define GPIO7       (GPIO_PIN(PORT_GPIO,7))
-#define GPIO8       (GPIO_PIN(PORT_GPIO,8))
-#define GPIO9       (GPIO_PIN(PORT_GPIO,9))
-#define GPIO10      (GPIO_PIN(PORT_GPIO,10))
-#define GPIO11      (GPIO_PIN(PORT_GPIO,11))
-#define GPIO12      (GPIO_PIN(PORT_GPIO,12))
-#define GPIO13      (GPIO_PIN(PORT_GPIO,13))
-#define GPIO14      (GPIO_PIN(PORT_GPIO,14))
-#define GPIO15      (GPIO_PIN(PORT_GPIO,15))
-#define GPIO16      (GPIO_PIN(PORT_GPIO,16))
+#define GPIO0       (GPIO_PIN(PORT_GPIO, 0))
+#define GPIO1       (GPIO_PIN(PORT_GPIO, 1))
+#define GPIO2       (GPIO_PIN(PORT_GPIO, 2))
+#define GPIO3       (GPIO_PIN(PORT_GPIO, 3))
+#define GPIO4       (GPIO_PIN(PORT_GPIO, 4))
+#define GPIO5       (GPIO_PIN(PORT_GPIO, 5))
+#define GPIO6       (GPIO_PIN(PORT_GPIO, 6))
+#define GPIO7       (GPIO_PIN(PORT_GPIO, 7))
+#define GPIO8       (GPIO_PIN(PORT_GPIO, 8))
+#define GPIO9       (GPIO_PIN(PORT_GPIO, 9))
+#define GPIO10      (GPIO_PIN(PORT_GPIO, 10))
+#define GPIO11      (GPIO_PIN(PORT_GPIO, 11))
+#define GPIO12      (GPIO_PIN(PORT_GPIO, 12))
+#define GPIO13      (GPIO_PIN(PORT_GPIO, 13))
+#define GPIO14      (GPIO_PIN(PORT_GPIO, 14))
+#define GPIO15      (GPIO_PIN(PORT_GPIO, 15))
+#define GPIO16      (GPIO_PIN(PORT_GPIO, 16))
 /** @} */
 
 /**
@@ -158,7 +158,7 @@ typedef struct {
 } i2c_conf_t;
 
 /**
- * @brief   Maximum number of I2C interfaces that can be used by board definitions
+ * @brief   Maximum number of I2C interfaces
  */
 #define I2C_NUMOF_MAX   (2)
 
@@ -175,6 +175,22 @@ typedef struct {
 #define PROVIDES_PM_SET_LOWEST
 #define PROVIDES_PM_RESTART
 #define PROVIDES_PM_OFF
+#define PROVIDES_PM_LAYERED_OFF
+
+/**
+ * @brief   Number of usable low power modes
+ */
+#define PM_NUM_MODES            (2U)
+
+/**
+ * @name    Power modes
+ * @{
+ */
+#define ESP_PM_MODEM_SLEEP      (2U)
+#define ESP_PM_LIGHT_SLEEP      (1U)
+#define ESP_PM_DEEP_SLEEP       (0U)
+/** @} */
+
 /** @} */
 
 /**
@@ -221,7 +237,7 @@ typedef struct {
  * @name    RTT and RTC configuration
  * @{
  */
-#define RTT_FREQUENCY       (312500UL)
+#define RTT_FREQUENCY       (1000000U)
 #define RTT_MAX_VALUE       (0xFFFFFFFFUL)
 /** @} */
 
@@ -273,9 +289,9 @@ typedef struct {
  */
 #define SPI_NUMOF_MAX   (1)
 
-#define PERIPH_SPI_NEEDS_TRANSFER_BYTE  /**< requires function spi_transfer_byte */
-#define PERIPH_SPI_NEEDS_TRANSFER_REG   /**< requires function spi_transfer_reg */
-#define PERIPH_SPI_NEEDS_TRANSFER_REGS  /**< requires function spi_transfer_regs */
+#define PERIPH_SPI_NEEDS_TRANSFER_BYTE  /**< requires spi_transfer_byte */
+#define PERIPH_SPI_NEEDS_TRANSFER_REG   /**< requires spi_transfer_reg */
+#define PERIPH_SPI_NEEDS_TRANSFER_REGS  /**< requires spi_transfer_regs */
 /** @} */
 
 /**

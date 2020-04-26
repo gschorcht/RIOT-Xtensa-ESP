@@ -16,10 +16,13 @@
 #include "esp_attr.h"
 #include "irq.h"
 #include "rom/ets_sys.h"
+#include "sdk_conf.h"
 
 #include "freertos/FreeRTOS.h"
+#include "xtensa/xtensa_rtos.h"
 
-unsigned _xt_tick_divisor = 0;  /* cached number of cycles per tick */
+/* cached number of cycles per tick */
+unsigned _xt_tick_divisor = xtbsp_clock_freq_hz() / XT_TICK_PER_SEC;
 
 extern void vTaskEnterCritical( portMUX_TYPE *mux );
 extern void vTaskExitCritical( portMUX_TYPE *mux );
@@ -29,24 +32,47 @@ void vPortEnterCritical(void)
     vTaskEnterCritical(0);
 }
 
-extern void vPortExitCritical(void)
+void vPortExitCritical(void)
 {
     vTaskExitCritical(0);
 }
 
-/* source: /path/to/esp8266-rtos-sdk/components/freertos/port/esp8266/port.c */
+#define INT_ENA_WDEV        0x3ff20c18
+#define WDEV_TSF0_REACH_INT (BIT(27))
+
+extern char NMIIrqIsOn;
+extern uint32_t WDEV_INTEREST_EVENT;
+
+void ets_nmi_lock(void)
+{
+    REG_WRITE(INT_ENA_WDEV, 0);
+    for (unsigned i = 0; i < 10; i++) { }
+    REG_WRITE(INT_ENA_WDEV, WDEV_TSF0_REACH_INT);
+}
+
+void ets_nmi_unlock(void)
+{
+    REG_WRITE(INT_ENA_WDEV, WDEV_INTEREST_EVENT);
+}
+
 void IRAM_ATTR vPortETSIntrLock(void)
 {
-    ETS_INTR_LOCK();
+    if (NMIIrqIsOn == 0) {
+        vPortEnterCritical();
+        REG_WRITE(INT_ENA_WDEV, 0);
+        for (unsigned i = 0; i < 10; i++) { }
+        REG_WRITE(INT_ENA_WDEV, WDEV_TSF0_REACH_INT);
+    }
 }
 
-/* source: /path/to/esp8266-rtos-sdk/components/freertos/port/esp8266/port.c */
 void IRAM_ATTR vPortETSIntrUnlock(void)
 {
-    ETS_INTR_UNLOCK();
+    if (NMIIrqIsOn == 0) {
+        REG_WRITE(INT_ENA_WDEV, WDEV_INTEREST_EVENT);
+        vPortExitCritical();
+    }
 }
 
-/* source: /path/to/esp8266-rtos-sdk/components/freertos/port/esp8266/port.c */
 void ResetCcountVal(unsigned int cnt_val)
 {
     __asm__ volatile("wsr a2, ccount");

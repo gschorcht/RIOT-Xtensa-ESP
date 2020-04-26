@@ -64,11 +64,9 @@ mtd_desc_t _flash_driver;
 #ifdef MCU_ESP8266
 
 /* for source code compatibility with ESP32 SDK */
-#define esp_rom_spiflash_chip_t     esp_spi_flash_chip_t
-#define g_rom_flashchip             flashchip
 
 /* defined in vendor/esp-idf/spi_flash.c */
-extern esp_spi_flash_chip_t flashchip;
+extern esp_rom_spiflash_chip_t g_rom_flashchip;
 extern uint32_t spi_flash_get_id(void);
 
 #endif /* MCU_ESP8266 */
@@ -105,8 +103,13 @@ void spi_flash_drive_init (void)
     assert(_flashchip);
 
 #ifdef MCU_ESP8266
-    _flashchip->deviceId = spi_flash_get_id();
-    uint8_t devid_lb = _flashchip->deviceId >> 16 & 0xff;
+    /*
+     * The size returned by spi_flash_get_chip_size is fix size of 1 MB
+     * as configured for the bootloader in static configuration. We try to
+     * determine the size directly from the chip.
+     */
+    _flashchip->device_id = spi_flash_get_id();
+    uint8_t devid_lb = _flashchip->device_id >> 16 & 0xff;
     if (devid_lb >= 0x12 && devid_lb <= 0x18) {
         _flashchip->chip_size = flash_sizes[devid_lb - 0x12] << 10;
     }
@@ -211,7 +214,7 @@ void spi_flash_drive_init (void)
         case ESP_ROM_SPIFLASH_RESULT_TIMEOUT: return ESP_ERR_FLASH_OP_TIMEOUT; \
     } \
     return ESP_FAIL; \
-} while(0)
+} while (0)
 
 uint8_t _flash_buf[ESP_ROM_SPIFLASH_BUFF_BYTE_READ_NUM];
 
@@ -481,7 +484,6 @@ esp_err_t esp_partition_erase_range(const esp_partition_t* part,
 
     return spi_flash_erase_range(part->address + addr, size);
 }
-
 
 static int _flash_init  (mtd_dev_t *dev)
 {

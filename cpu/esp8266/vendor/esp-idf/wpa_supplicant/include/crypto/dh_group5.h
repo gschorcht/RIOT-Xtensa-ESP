@@ -19,9 +19,11 @@
 extern "C" {
 #endif
 
+#include "wpa/wpabuf.h"
+
 void * wpa_dh5_init(struct wpabuf **priv, struct wpabuf **publ);
 struct wpabuf * wpa_dh5_derive_shared(void *ctx, const struct wpabuf *peer_public,
-                                      const struct wpabuf *own_private);
+				  const struct wpabuf *own_private);
 void wpa_dh5_free(void *ctx);
 
 #ifdef __cplusplus

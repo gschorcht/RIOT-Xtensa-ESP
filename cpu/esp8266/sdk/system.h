@@ -37,7 +37,7 @@ extern "C" {
  *
  * @{
  */
-extern uint8_t system_get_cpu_freq(void);
+extern uint8_t esp_get_cpu_frequency(void);
 extern void system_update_cpu_freq(uint8_t);
 extern uint32_t system_get_chip_id(void);
 extern const char* system_get_sdk_version(void);
@@ -45,8 +45,9 @@ extern const char* system_get_sdk_version(void);
 extern void system_deep_sleep(uint32_t time_in_us);
 extern void system_restart(void);
 
-#define system_wdt_init    esp_task_wdt_init
-#define system_wdt_feed    esp_task_wdt_reset
+#define system_get_cpu_freq esp_get_cpu_frequency
+#define system_wdt_init     esp_task_wdt_init
+#define system_wdt_feed     esp_task_wdt_reset
 
 /** @} */
 

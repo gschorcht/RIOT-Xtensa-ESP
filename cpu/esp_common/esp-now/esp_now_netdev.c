@@ -118,7 +118,7 @@ static void IRAM_ATTR esp_now_scan_peers_done(void)
     uint16_t ap_num;
 
     ret = esp_wifi_scan_get_ap_num(&ap_num);
-    DEBUG("wifi_scan_get_ap_num ret=%d num=%d\n", ret ,ap_num);
+    DEBUG("wifi_scan_get_ap_num ret=%d num=%d\n", ret, ap_num);
 
     if (ret == ESP_OK && ap_num) {
         uint32_t state;
@@ -271,7 +271,7 @@ static void IRAM_ATTR esp_now_send_cb(const uint8_t *mac, esp_now_send_status_t 
  */
 static esp_err_t IRAM_ATTR _esp_system_event_handler(void *ctx, system_event_t *event)
 {
-    switch(event->event_id) {
+    switch (event->event_id) {
         case SYSTEM_EVENT_STA_START:
             DEBUG("%s WiFi started\n", __func__);
             break;

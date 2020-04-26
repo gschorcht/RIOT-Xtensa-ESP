@@ -57,6 +57,10 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "sdkconfig.h"
+
+#ifndef CONFIG_ESP_AES
+
 #define AES_SMALL_TABLES
 
 /*
@@ -855,3 +859,5 @@ int wpa_rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int keyBits)
 
 	return -1;
 }
+
+#endif /* CONFIG_ESP_AES */

@@ -65,8 +65,7 @@
 
 #ifdef MCU_ESP8266
 
-#include "esp_socket.h"
-#include "net/sockio.h"
+#include "esp_aio.h"
 #include "xtensa/xtensa_context.h"
 
 #define CONFIG_TCP_OVERSIZE_MSS 1
@@ -120,10 +119,11 @@ extern esp_err_t esp_system_event_add_handler (system_event_cb_t handler,
  * functionality. It uses malloc to allocate a packet buffer of type PBUF_RAM
  * for layer PBUF_RAW_TX.
  */
-static struct pbuf *_esp_wifi_pbuf_alloc(size_t size)
+static struct pbuf * IRAM_ATTR _esp_wifi_pbuf_alloc(size_t size)
 {
     /* Low level WiFi driver can only use 32-bit aligned DRAM memory */
-    size_t mem_size = LL_ALIGN(sizeof(struct pbuf)) + LL_ALIGN(size + PBUF_LINK_ENCAPSULATION_HLEN);
+    size_t mem_size = LL_ALIGN(sizeof(struct pbuf)) +
+                      LL_ALIGN(size + PBUF_LINK_ENCAPSULATION_HLEN);
     struct pbuf *pb = heap_caps_malloc(mem_size, MALLOC_CAP_8BIT);
     if (pb == NULL) {
         ESP_WIFI_LOG_ERROR("no space left for packet buffer allocation");
@@ -133,7 +133,8 @@ static struct pbuf *_esp_wifi_pbuf_alloc(size_t size)
 
     /* initialize pbuf data structure */
     pb->next = NULL;
-    pb->payload = (void *)LL_ALIGN((uint8_t *)pb + sizeof(struct pbuf) + PBUF_LINK_ENCAPSULATION_HLEN);
+    pb->payload = (void *)LL_ALIGN((uint8_t *)pb + sizeof(struct pbuf)
+                                                 + PBUF_LINK_ENCAPSULATION_HLEN);
     pb->tot_len = size;
     pb->len = size;
     pb->type = PBUF_RAM;
@@ -148,7 +149,7 @@ static struct pbuf *_esp_wifi_pbuf_alloc(size_t size)
 /**
  * Free function for pbuf allocation
  */
-static int _esp_wifi_pbuf_free(struct pbuf *pb)
+static int IRAM_ATTR _esp_wifi_pbuf_free(struct pbuf *pb)
 {
     assert(pb != NULL);
 
@@ -166,16 +167,9 @@ static int _esp_wifi_pbuf_free(struct pbuf *pb)
 }
 
 /**
- * Socket used for interaction with low level WiFi driver, -1 if not opened.
- * Since we have only one WiFi interface, it has not to be a member of the
- * netdev data structures. We can use a static variable instead.
- */
-static int _esp_wifi_socket = -1;
-
-/**
  * Function called when transmission of a packet has been finished.
  */
-static int _esp_wifi_tx_cb(esp_aio_t* aio)
+static int IRAM_ATTR _esp_wifi_tx_cb(esp_aio_t* aio)
 {
     assert(aio != NULL);
 
@@ -212,7 +206,8 @@ int esp_wifi_internal_tx(wifi_interface_t wifi_if, void *buf, uint16_t len)
     aio.arg = pb;
     aio.ret = 0;
 
-    if (esp_aio_sendto(&aio, NULL, 0) != 0) {
+    extern int ieee80211_output_pbuf(esp_aio_t *aio);
+    if (ieee80211_output_pbuf(&aio) != 0) {
         return ERR_IF;
     }
 
@@ -220,91 +215,10 @@ int esp_wifi_internal_tx(wifi_interface_t wifi_if, void *buf, uint16_t len)
 
     return ERR_OK;
 }
+#endif
 
-/**
- * Function for source code compatibility with ESP-IDF for ESP32
- */
-void esp_wifi_internal_free_rx_buffer(const char* buf)
+esp_err_t IRAM_ATTR _esp_wifi_rx_cb(void *buffer, uint16_t len, void *eb)
 {
-    assert(buf != NULL);
-    assert(_esp_wifi_socket != -1);
-
-    ESP_WIFI_DEBUG("buf=%p sock=%d", buf, _esp_wifi_socket);
-
-    esp_free_pbuf(_esp_wifi_socket, (void *)buf);
-}
-
-/**
- * Type definition for source code compatibility with ESP-IDF for ESP32
- */
-typedef int (*wifi_rxcb_t)(struct esp_aio *aio);
-
-/**
- * Function for source code compatibility with ESP-IDF for ESP32
- */
-esp_err_t esp_wifi_internal_reg_rxcb(wifi_interface_t ifx, wifi_rxcb_t fn)
-{
-    assert(ifx == ESP_IF_WIFI_STA);
-
-    ESP_WIFI_DEBUG("%d %p", ifx, fn);
-
-    extern int8_t wifi_get_netif(uint8_t fd);
-
-    /* if function is NULL, it is deregistered */
-    if (fn == NULL) {
-        /* if socket is allocated, it has to be closed */
-        if (_esp_wifi_socket != -1 && esp_close(_esp_wifi_socket) < 0) {
-            return ESP_FAIL;
-        }
-        _esp_wifi_socket = -1;
-        return ESP_OK;
-    }
-
-    /* if socket is already allocated we have to close it to register a function */
-    if (_esp_wifi_socket != -1 && esp_close(_esp_wifi_socket) < 0) {
-        return ESP_FAIL;
-    }
-
-    /* now, we have to allocate a new socket and register the function */
-    _esp_wifi_socket = esp_socket(AF_PACKET, SOCK_RAW, ETH_P_ALL);
-
-    if (_esp_wifi_socket < 0) {
-        ESP_WIFI_LOG_ERROR("create socket of (AF_PACKET, SOCK_RAW, ETH_P_ALL) error");
-        return ESP_FAIL;
-    }
-    if (esp_ioctl(_esp_wifi_socket, SIOCGIFINDEX, "sta0") < 0) {
-        ESP_WIFI_LOG_ERROR("bind socket %d to netcard %s error", _esp_wifi_socket, "sta0");
-        esp_close(_esp_wifi_socket);
-        return ESP_FAIL;
-    }
-    if (esp_aio_event(_esp_wifi_socket, ESP_SOCKET_RECV_EVENT, fn, &_esp_wifi_dev) < 0) {
-        ESP_WIFI_LOG_ERROR("socket %d register receive callback function %p error",
-                           _esp_wifi_socket, fn);
-        esp_close(_esp_wifi_socket);
-        return ESP_FAIL;
-    }
-    return ESP_OK;
-}
-
-#endif /* MCU_ESP8266 */
-
-#ifdef MCU_ESP8266
-
-/* Prolog for source code compatibility with ESP-IDF for ESP32 */
-static int _esp_wifi_rx_cb(struct esp_aio *aio)
-{
-    assert(aio != NULL);
-
-    const char *eb = aio->pbuf;
-    const char *buffer = aio->pbuf;
-    uint16_t len = aio->len;
-
-#else /* MCU_ESP8266 */
-
-esp_err_t _esp_wifi_rx_cb(void *buffer, uint16_t len, void *eb)
-{
-#endif /* MCU_ESP8266 */
-
     /*
      * This callback function is not executed in interrupt context but in the
      * context of the low level WiFi driver thread. That is, mutex_lock or
@@ -368,7 +282,7 @@ esp_err_t _esp_wifi_rx_cb(void *buffer, uint16_t len, void *eb)
 
 #define REASON_BEACON_TIMEOUT      (200)
 #define REASON_HANDSHAKE_TIMEOUT   (204)
-#define INDEX_BEACON_TIMEOUT       (REASON_BEACON_TIMEOUT - 24)
+#define INDEX_BEACON_TIMEOUT       (REASON_BEACON_TIMEOUT - 25)
 
 static const char *_esp_wifi_disc_reasons [] = {
     "INVALID",                     /* 0 */
@@ -383,6 +297,7 @@ static const char *_esp_wifi_disc_reasons [] = {
     "ASSOC_NOT_AUTHED",            /* 9 */
     "DISASSOC_PWRCAP_BAD",         /* 10 (11h) */
     "DISASSOC_SUPCHAN_BAD",        /* 11 (11h) */
+    "UNKNOWN",                     /* 12 */
     "IE_INVALID",                  /* 13 (11i) */
     "MIC_FAILURE",                 /* 14 (11i) */
     "4WAY_HANDSHAKE_TIMEOUT",      /* 15 (11i) */
@@ -420,7 +335,7 @@ static esp_err_t IRAM_ATTR _esp_system_event_handler(void *ctx, system_event_t *
     uint8_t reason;
     const char* reason_str = "UNKNOWN";
 
-    switch(event->event_id) {
+    switch (event->event_id) {
         case SYSTEM_EVENT_STA_START:
             _esp_wifi_started = 1;
             ESP_WIFI_DEBUG("WiFi started");
@@ -637,7 +552,7 @@ static int _esp_wifi_get(netdev_t *netdev, netopt_t opt, void *val, size_t max_l
             return sizeof(uint16_t);
         case NETOPT_ADDRESS:
             assert(max_len >= ETHERNET_ADDR_LEN);
-            esp_wifi_get_mac(ESP_MAC_WIFI_STA,(uint8_t *)val);
+            esp_wifi_get_mac(ESP_MAC_WIFI_STA, (uint8_t *)val);
             return ETHERNET_ADDR_LEN;
         case NETOPT_LINK:
             assert(max_len == sizeof(netopt_enable_t));
@@ -720,13 +635,7 @@ static wifi_config_t wifi_config_sta = {
         .scan_method = WIFI_ALL_CHANNEL_SCAN,
         .sort_method = WIFI_CONNECT_AP_BY_SIGNAL,
         .threshold.rssi = -127,
-#if defined(MODULE_ESP_WIFI_ENTERPRISE)
-        .threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE
-#elif defined(ESP_WIFI_PASS)
-        .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK
-#else
         .threshold.authmode = WIFI_AUTH_OPEN
-#endif
     }
 };
 

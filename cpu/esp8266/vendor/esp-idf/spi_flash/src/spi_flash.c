@@ -20,7 +20,6 @@
 #include "priv/esp_spi_flash_raw.h"
 
 #include "esp_attr.h"
-#include "esp_wifi_osi.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_task_wdt.h"
@@ -65,7 +64,7 @@
 extern void vPortEnterCritical(void);
 extern void vPortExitCritical(void);
 
-esp_spi_flash_chip_t flashchip = {
+esp_rom_spiflash_chip_t g_rom_flashchip = {
     0x1640ef,
     CONFIG_SPI_FLASH_SIZE,
     64 * 1024,
@@ -90,7 +89,7 @@ bool spi_user_cmd(spi_cmd_dir_t mode, spi_cmd_t *p_cmd)
     FLASH_INTR_LOCK(c_tmp);
     FlashIsOnGoing = 1;
 
-    ret = spi_user_cmd_raw(&flashchip, mode, p_cmd);
+    ret = spi_user_cmd_raw(&g_rom_flashchip, mode, p_cmd);
 
     FlashIsOnGoing = 0;
     FLASH_INTR_UNLOCK(c_tmp);
@@ -145,7 +144,7 @@ bool special_flash_write_status(uint8_t command, uint32_t status, int len, bool 
     return ret;
 }
 
-uint8_t en25q16x_read_sfdp(void)
+uint8_t en25q16x_read_sfdp()
 {
     spi_cmd_t cmd;
     uint32_t addr = 0x00003000;
@@ -175,7 +174,7 @@ uint32_t spi_flash_get_id(void)
 
     FlashIsOnGoing = 1;
 
-    rdid = spi_flash_get_id_raw(&flashchip);
+    rdid = spi_flash_get_id_raw(&g_rom_flashchip);
 
     FlashIsOnGoing = 0;
 
@@ -193,7 +192,7 @@ esp_err_t spi_flash_read_status(uint32_t *status)
 
     FlashIsOnGoing = 1;
 
-    ret = spi_flash_read_status_raw(&flashchip, status);
+    ret = spi_flash_read_status_raw(&g_rom_flashchip, status);
 
     FlashIsOnGoing = 0;
 
@@ -210,7 +209,7 @@ esp_err_t spi_flash_write_status(uint32_t status_value)
 
     FlashIsOnGoing = 1;
 
-    spi_flash_write_status_raw(&flashchip, status_value);
+    spi_flash_write_status_raw(&g_rom_flashchip, status_value);
 
     FlashIsOnGoing = 0;
 
@@ -347,7 +346,7 @@ static void flash_gd25q32c_write_status(enum GD25Q32C_status status_index,uint8_
     special_flash_write_status(wrsr_cmd, new_status, 1, true);
 }
 
-static bool flash_gd25q32c_enable_QIO_mode(void)
+static bool flash_gd25q32c_enable_QIO_mode()
 {
     uint8_t data = 0;
     if((data=flash_gd25q32c_read_status(GD25Q32C_STATUS2))&SPI_FLASH_GD25Q32C_QIO_MODE) {
@@ -431,13 +430,13 @@ void user_spi_flash_dio_to_qio_pre_init(void)
             to_qio = true;
         }
         //ENABLE FLASH QIO 0X31H+BIT2
-    } else if (((flash_id & 0xFFFFFF) == 0x1640C8) || ((flash_id & 0xFFFFFF) == 0x1840C8)) {
+    } else if ((flash_id & 0xFFFF) == 0x40C8) {
         if (flash_gd25q32c_enable_QIO_mode() == true) {
             to_qio = true;
         }
         //ENBALE FLASH QIO 0X01H+0X00+0X02
     } else {
-        if (spi_flash_enable_qmode_raw(&flashchip) == ESP_OK) {
+        if (spi_flash_enable_qmode_raw(&g_rom_flashchip) == ESP_OK) {
             to_qio = true;
         }
     }
@@ -453,7 +452,7 @@ esp_err_t spi_flash_erase_sector(size_t sec)
 
     esp_err_t ret;
 
-    if (sec >= (flashchip.chip_size / flashchip.sector_size)) {
+    if (sec >= (g_rom_flashchip.chip_size / g_rom_flashchip.sector_size)) {
         return ESP_ERR_FLASH_OP_FAIL;
     }
 
@@ -464,7 +463,7 @@ esp_err_t spi_flash_erase_sector(size_t sec)
     FLASH_INTR_LOCK(c_tmp);
     FlashIsOnGoing = 1;
     
-    ret = spi_flash_erase_sector_raw(&flashchip, sec, flashchip.sector_size);
+    ret = spi_flash_erase_sector_raw(&g_rom_flashchip, sec, g_rom_flashchip.sector_size);
 
     FlashIsOnGoing = 0;
     FLASH_INTR_UNLOCK(c_tmp);
@@ -478,15 +477,15 @@ static esp_err_t spi_flash_program(uint32_t target, uint32_t *src_addr, size_t l
     uint32_t pgm_len, pgm_num;
     uint8_t i;
 
-    page_size = flashchip.page_size;
+    page_size = g_rom_flashchip.page_size;
     pgm_len = page_size - (target % page_size);
 
     if (len < pgm_len) {
-        if (ESP_OK != spi_flash_write_raw(&flashchip,  target, src_addr, len)) {
+        if (ESP_OK != spi_flash_write_raw(&g_rom_flashchip,  target, src_addr, len)) {
             return ESP_ERR_FLASH_OP_FAIL;
         }
     } else {
-        if (ESP_OK != spi_flash_write_raw(&flashchip,  target, src_addr, pgm_len)) {
+        if (ESP_OK != spi_flash_write_raw(&g_rom_flashchip,  target, src_addr, pgm_len)) {
             return ESP_ERR_FLASH_OP_FAIL;
         }
 
@@ -494,7 +493,7 @@ static esp_err_t spi_flash_program(uint32_t target, uint32_t *src_addr, size_t l
         pgm_num = (len - pgm_len) / page_size;
 
         for (i = 0; i < pgm_num; i++) {
-            if (ESP_OK != spi_flash_write_raw(&flashchip,  target + pgm_len, src_addr + (pgm_len >> 2), page_size)) {
+            if (ESP_OK != spi_flash_write_raw(&g_rom_flashchip,  target + pgm_len, src_addr + (pgm_len >> 2), page_size)) {
                 return ESP_ERR_FLASH_OP_FAIL;
             }
 
@@ -502,7 +501,7 @@ static esp_err_t spi_flash_program(uint32_t target, uint32_t *src_addr, size_t l
         }
 
         //remain parts to program
-        if (ESP_OK != spi_flash_write_raw(&flashchip,  target + pgm_len, src_addr + (pgm_len >> 2), len - pgm_len)) {
+        if (ESP_OK != spi_flash_write_raw(&g_rom_flashchip,  target + pgm_len, src_addr + (pgm_len >> 2), len - pgm_len)) {
             return ESP_ERR_FLASH_OP_FAIL;
         }
     }
@@ -557,7 +556,7 @@ esp_err_t spi_flash_write(size_t dest_addr, const void *src, size_t size)
         return ESP_ERR_FLASH_OP_FAIL;
     }
 
-    if ((dest_addr + size) > flashchip.chip_size) {
+    if ((dest_addr + size) > g_rom_flashchip.chip_size) {
         return ESP_ERR_FLASH_OP_FAIL;
     }
 
@@ -620,7 +619,7 @@ static esp_err_t __spi_flash_read(size_t src_addr, void *dest, size_t size)
     FLASH_INTR_LOCK(c_tmp);
     FlashIsOnGoing = 1;
 
-    ret = spi_flash_read_raw(&flashchip, src_addr, dest, size);
+    ret = spi_flash_read_raw(&g_rom_flashchip, src_addr, dest, size);
 
     FlashIsOnGoing = 0;
     FLASH_INTR_UNLOCK(c_tmp);
@@ -776,4 +775,9 @@ uintptr_t spi_flash_cache2phys(const void *cached)
         return SPI_FLASH_CACHE2PHYS_FAIL;
     
     return segment * CACHE_2M_SIZE + (addr + addr_offset - CACHE_BASE_ADDR);
+}
+
+size_t spi_flash_get_chip_size()
+{
+    return g_rom_flashchip.chip_size;
 }

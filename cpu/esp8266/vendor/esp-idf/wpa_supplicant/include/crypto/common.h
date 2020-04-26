@@ -15,11 +15,11 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "os.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "os.h"
 
 #if defined(__XTENSA__)
 #include <machine/endian.h>

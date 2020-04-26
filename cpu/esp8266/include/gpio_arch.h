@@ -33,6 +33,19 @@ extern const uint8_t _gpio_to_iomux[];
 /** Map of IOMUX pin numbers to GPIO pin numbers */
 extern const uint8_t _iomux_to_gpio[];
 
+/**
+ * @brief   Called before the power management enters a light or deep sleep mode
+ *
+ * @param   mode    sleep mode that is entered
+ */
+void gpio_pm_sleep_enter(unsigned mode);
+
+/**
+ * @brief   Called after the power management left light sleep mode
+ * @param   cause   wake-up cause
+ */
+void gpio_pm_sleep_exit(uint32_t cause);
+
 #ifdef __cplusplus
 }
 #endif

@@ -42,8 +42,10 @@
 #endif
 
 static const char *TAG = "heap_trace";
-static int s_heap_trace_mode = HEAP_TRACE_NONE;
-extern heap_region_t g_heap_region[HEAP_REGIONS_MAX];
+
+extern size_t g_heap_region_num;
+extern heap_region_t g_heap_region[];
+extern int __g_heap_trace_mode;
 
 /**
  * @brief Empty function just for passing compiling some place.
@@ -58,7 +60,7 @@ esp_err_t heap_trace_init_standalone(heap_trace_record_t *record_buffer, size_t 
  */
 int heap_trace_is_on(void)
 {
-    return s_heap_trace_mode == HEAP_TRACE_LEAKS;
+    return __g_heap_trace_mode == HEAP_TRACE_LEAKS;
 }
 
 /**
@@ -66,7 +68,7 @@ int heap_trace_is_on(void)
  */
 esp_err_t heap_trace_start(heap_trace_mode_t mode)
 {
-    s_heap_trace_mode = mode;
+    __g_heap_trace_mode = mode;
 
     return ESP_OK;
 }
@@ -76,7 +78,7 @@ esp_err_t heap_trace_start(heap_trace_mode_t mode)
  */
 esp_err_t heap_trace_stop(void)
 {
-    s_heap_trace_mode = HEAP_TRACE_NONE;
+    __g_heap_trace_mode = HEAP_TRACE_NONE;
 
     return ESP_OK;
 }
@@ -86,7 +88,7 @@ esp_err_t heap_trace_stop(void)
  */
 esp_err_t heap_trace_resume(void)
 {
-    s_heap_trace_mode = HEAP_TRACE_LEAKS;
+    __g_heap_trace_mode = HEAP_TRACE_LEAKS;
 
     return ESP_OK;
 }
@@ -99,7 +101,7 @@ void heap_trace_dump(void)
     uint8_t num;
     mem_blk_t *mem_start, *mem_end, *p;
 
-    for (num = 0; num < HEAP_REGIONS_MAX; num++) {
+    for (num = 0; num < g_heap_region_num; num++) {
         mem_start = (mem_blk_t *)HEAP_ALIGN(g_heap_region[num].start_addr);
         mem_end = (mem_blk_t *)(HEAP_ALIGN(g_heap_region[num].start_addr + g_heap_region[num].total_size));
         if ((uint8_t *)mem_end != g_heap_region[num].start_addr + g_heap_region[num].total_size)

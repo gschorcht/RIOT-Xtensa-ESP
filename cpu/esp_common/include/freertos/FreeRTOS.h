@@ -37,6 +37,7 @@ typedef uint32_t TickType_t;
 
 uint32_t xPortGetTickRateHz(void);
 BaseType_t xPortInIsrContext(void);
+TickType_t prvGetExpectedIdleTime(void);
 
 /*
  * PLEASE NOTE: Following definitions were copied directly from the FreeRTOS

@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 #include <stdarg.h>
-#include "sdk_conf.h"
-#include <rom/ets_sys.h>
+#include "sdkconfig.h"
+#include "rom/ets_sys.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,16 +29,19 @@ extern "C" {
  *
  */
 typedef enum {
-    ESP_LOG_NONE,       /*!< No log output */
+    ESP_LOG_NONE = 0,   /*!< No log output */
     ESP_LOG_ERROR,      /*!< Critical errors, software module can not recover on its own */
     ESP_LOG_WARN,       /*!< Error conditions from which recovery measures have been taken */
     ESP_LOG_INFO,       /*!< Information messages which describe normal flow of events */
     ESP_LOG_DEBUG,      /*!< Extra information which is not necessary for normal use (values, pointers, sizes, etc). */
-    ESP_LOG_VERBOSE     /*!< Bigger chunks of debugging information, or frequent messages which can potentially flood the output. */
+    ESP_LOG_VERBOSE,    /*!< Bigger chunks of debugging information, or frequent messages which can potentially flood the output. */
+
+    ESP_LOG_MAX
 } esp_log_level_t;
 
-typedef int (*vprintf_like_t)(const char *, va_list);
+typedef int (*putchar_like_t)(int ch);
 
+#ifdef CONFIG_LOG_SET_LEVEL
 /**
  * @brief Set log level for given tag
  *
@@ -58,6 +61,9 @@ typedef int (*vprintf_like_t)(const char *, va_list);
  * levels will be shown.
  */
 void esp_log_level_set(const char* tag, esp_log_level_t level);
+#else
+#define esp_log_level_set(tag, level)
+#endif /* CONFIG_LOG_SET_LEVEL */
 
 /**
  * @brief Set function used to output log entries
@@ -66,11 +72,11 @@ void esp_log_level_set(const char* tag, esp_log_level_t level);
  * output to some other destination, such as file or network. Returns the original
  * log handler, which may be necessary to return output to the previous destination.
  *
- * @param func new Function used for output. Must have same signature as vprintf.
+ * @param func new Function used for output. Must have same signature as putchar.
  *
  * @return func old Function used for output.
  */
-vprintf_like_t esp_log_set_vprintf(vprintf_like_t func);
+putchar_like_t esp_log_set_putchar(putchar_like_t func);
 
 /**
  * @brief Function which returns timestamp to be used in log output
@@ -107,6 +113,15 @@ uint32_t esp_log_early_timestamp(void);
 void esp_log_write(esp_log_level_t level, const char* tag, const char* format, ...) __attribute__ ((format (printf, 3, 4)));
 
 #ifndef RIOT_VERSION
+/**
+ * @brief Write message into the log at system startup or critical state
+ *
+ * This function is not intended to be used directly. Instead, use one of
+ * ESP_EARLY_LOGE, ESP_EARLY_LOGW, ESP_LEARLY_OGI, ESP_EARLY_LOGD, ESP_EARLY_LOGV macros.
+ *
+ * This function or these macros can be used from an interrupt or NMI exception.
+ */
+void esp_early_log_write(esp_log_level_t level, const char* tag, const char* format, ...) __attribute__ ((format (printf, 3, 4)));
 
 /** @cond */
 
@@ -217,7 +232,6 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
 #define esp_log_buffer_hex      ESP_LOG_BUFFER_HEX
 #define esp_log_buffer_char     ESP_LOG_BUFFER_CHAR
 
-
 #if CONFIG_LOG_COLORS
 #define LOG_COLOR_BLACK   "30"
 #define LOG_COLOR_RED     "31"
@@ -243,8 +257,6 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
 #define LOG_RESET_COLOR
 #endif //CONFIG_LOG_COLORS
 
-#define LOG_FORMAT(letter, format)  LOG_COLOR_ ## letter #letter " (%d) %s: " format LOG_RESET_COLOR "\n"
-
 /** @endcond */
 
 /// macro to output logs in startup code, before heap allocator and syscalls have been initialized. log at ``ESP_LOG_ERROR`` level. @see ``printf``,``ESP_LOGE``
@@ -260,7 +272,7 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
 
 #define ESP_LOG_EARLY_IMPL(tag, format, log_level, log_tag_letter, ...) do {                         \
         if (LOG_LOCAL_LEVEL >= log_level) {                                                          \
-            ets_printf(LOG_FORMAT(log_tag_letter, format), esp_log_timestamp(), tag, ##__VA_ARGS__); \
+            esp_early_log_write(log_level, tag, format, ##__VA_ARGS__);                              \
         }} while(0)
 
 #ifndef BOOTLOADER_BUILD
@@ -298,12 +310,11 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
  * @see ``printf``
  */
 #define ESP_LOG_LEVEL(level, tag, format, ...) do {                     \
-        if (level==ESP_LOG_ERROR )          { \
-            esp_log_write(ESP_LOG_ERROR,  tag, LOG_FORMAT(E, format), esp_log_timestamp(), tag, ##__VA_ARGS__); } \
-        else if (level==ESP_LOG_WARN )      { esp_log_write(ESP_LOG_WARN,       tag, LOG_FORMAT(W, format), esp_log_timestamp(), tag, ##__VA_ARGS__); } \
-        else if (level==ESP_LOG_DEBUG )     { esp_log_write(ESP_LOG_DEBUG,      tag, LOG_FORMAT(D, format), esp_log_timestamp(), tag, ##__VA_ARGS__); } \
-        else if (level==ESP_LOG_VERBOSE )   { esp_log_write(ESP_LOG_VERBOSE,    tag, LOG_FORMAT(V, format), esp_log_timestamp(), tag, ##__VA_ARGS__); } \
-        else                                { esp_log_write(ESP_LOG_INFO,       tag, LOG_FORMAT(I, format), esp_log_timestamp(), tag, ##__VA_ARGS__); } \
+        if (level==ESP_LOG_ERROR )          { esp_log_write(ESP_LOG_ERROR,      tag, format, ##__VA_ARGS__); } \
+        else if (level==ESP_LOG_WARN )      { esp_log_write(ESP_LOG_WARN,       tag, format, ##__VA_ARGS__); } \
+        else if (level==ESP_LOG_DEBUG )     { esp_log_write(ESP_LOG_DEBUG,      tag, format, ##__VA_ARGS__); } \
+        else if (level==ESP_LOG_VERBOSE )   { esp_log_write(ESP_LOG_VERBOSE,    tag, format, ##__VA_ARGS__); } \
+        else                                { esp_log_write(ESP_LOG_INFO,       tag, format, ##__VA_ARGS__); } \
     } while(0)
 
 /** runtime macro to output logs at a specified level. Also check the level with ``LOG_LOCAL_LEVEL``.

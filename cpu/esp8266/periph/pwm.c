@@ -41,8 +41,7 @@
 #define ETS_FRC1_INT_DISABLE()      xt_ints_off(BIT(ETS_FRC_TIMER1_INUM))
 #define ETS_FRC1_INT_ATTACH(f, a)   xt_set_interrupt_handler(ETS_FRC_TIMER1_INUM, f, a)
 
-typedef struct
-{
+typedef struct {
     uint16_t    duty;
     uint32_t    next_on;
     uint32_t    next_off;
@@ -50,8 +49,7 @@ typedef struct
 
 } _pwm_chn_t;
 
-typedef struct
-{
+typedef struct {
     pwm_mode_t  mode;
     uint16_t    res;
     uint32_t    load;
@@ -63,7 +61,7 @@ typedef struct
 
 static _pwm_dev_t _pwm_dev;
 
-static void _pwm_timer_handler (void* arg)
+static void IRAM_ATTR _pwm_timer_handler (void* arg)
 {
     irq_isr_enter ();
 
@@ -155,7 +153,7 @@ uint32_t pwm_init(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res)
     }
 
     TIMER_FRC1.CTRL = TIMER_FRC1_CLKDIV_16 | TIMER_CTRL_RELOAD | TIMER_CTRL_RUN;
-    ETS_FRC1_INT_ATTACH(_pwm_timer_handler,0);
+    ETS_FRC1_INT_ATTACH(_pwm_timer_handler, 0);
     TM1_EDGE_INT_ENABLE();
     ETS_FRC1_INT_ENABLE();
 

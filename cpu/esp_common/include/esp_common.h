@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 #include "log.h"
+#include "esp_attr.h"
 #include "esp_common_log.h"
 
 #define asm __asm__

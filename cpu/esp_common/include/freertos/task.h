@@ -58,6 +58,9 @@ void vTaskExitCritical(portMUX_TYPE *mux);
 
 TickType_t xTaskGetTickCount(void);
 
+void vTaskSuspendAll(void);
+BaseType_t xTaskResumeAll(void);
+
 #ifdef __cplusplus
 }
 #endif

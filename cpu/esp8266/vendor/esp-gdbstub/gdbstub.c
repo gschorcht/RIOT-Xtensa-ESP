@@ -7,6 +7,7 @@
  * License: ESPRESSIF MIT License
  *******************************************************************************/
 
+#include <errno.h>
 #include <signal.h>
 #include <string.h>
 
@@ -16,6 +17,7 @@
 #include "periph/uart.h"
 #include "rom/ets_sys.h"
 #include "sdk/sdk.h"
+#include "stdio_uart.h"
 #include "xtensa/corebits.h"
 
 #include "gdbstub.h"
@@ -107,7 +109,9 @@ static int ATTR_GDBFN gdbRecvChar(void)
 /* Send a char to the UART. */
 static void ATTR_GDBFN gdbSendChar(char c)
 {
-    uart_write(UART_DEV(0), (const uint8_t *)&c, 1);
+    while (((READ_PERI_REG(UART_STATUS(0)) >> UART_TXFIFO_CNT_S)&UART_TXFIFO_CNT)>=126)
+        ;
+    WRITE_PERI_REG(UART_FIFO(0), c);
 }
 
 /* Send the start of a packet; reset checksum calculation. */
@@ -434,13 +438,11 @@ static int ATTR_GDBFN gdbHandleCommand(unsigned char *cmd, int len)
         sendReason();
     }
 
-#if 0
-    else if (strncmp(cmd, "vCont?", 6) == 0) {
+    else if (strncmp((char*)cmd, "vCont?", 6) == 0) {
         gdbPacketStart();
         gdbPacketStr("vCont;c;s");
         gdbPacketEnd();
     }
-#endif
 
     else if (strncmp((char*)cmd, "vCont;c", 7) == 0 || cmd[0] == 'c') {
         /* continue execution */
@@ -569,7 +571,8 @@ static int ATTR_GDBFN gdbHandleCommand(unsigned char *cmd, int len)
  *         a character if it is received instead of the GDB packet start char.
  */
 static bool _gdbstub_in_rcv_packet = false;
-static int ATTR_GDBFN gdbReadCommand(void)
+
+static int ATTR_GDBFN gdbReadCommand(bool preamble_read)
 {
     unsigned char c;
     unsigned char chsum = 0, rchsum;
@@ -577,10 +580,12 @@ static int ATTR_GDBFN gdbReadCommand(void)
     int p = 0;
     unsigned char *ptr;
 
-    c = gdbRecvChar();
+    if (!preamble_read) {
+        c = gdbRecvChar();
 
-    if (c != '$') {
-        return c;
+        if (c != '$') {
+            return c;
+        }
     }
 
     while(1) {
@@ -594,7 +599,7 @@ static int ATTR_GDBFN gdbReadCommand(void)
         chsum += c;
 
         if (c == '$') {     /* restart packet? */
-_gdbstub_in_rcv_packet = true;
+            _gdbstub_in_rcv_packet = true;
             chsum = 0;
             p = 0;
             continue;
@@ -622,13 +627,13 @@ _gdbstub_in_rcv_packet = true;
     if (rchsum != chsum) {
         /* wrong checksum, request retransmission */
         gdbSendChar('-');
-_gdbstub_in_rcv_packet = false;
+        _gdbstub_in_rcv_packet = false;
         return ST_ERR;
     }
 
     /* ack the package and handle the command */
     gdbSendChar('+');
-_gdbstub_in_rcv_packet = false;
+    _gdbstub_in_rcv_packet = false;
     return gdbHandleCommand(cmd, p);
 }
 
@@ -746,7 +751,7 @@ void ATTR_GDBFN gdbstub_handle_debug_exception(void)
     }
 
     sendReason();
-    while (gdbReadCommand() != ST_CONT) { }
+    while (gdbReadCommand(false) != ST_CONT) { }
 
     if ((gdbstub_regs.exc_frame_gdb.reason & 0x84) == 0x4)
     {
@@ -804,7 +809,7 @@ static void ATTR_GDBFN gdb_exception_handler(XtExcFrame *frame)
     ets_wdt_disable();
 
     sendReason();
-    while (gdbReadCommand() != ST_CONT) { }
+    while (gdbReadCommand(false) != ST_CONT) { }
 
     ets_wdt_enable();
 
@@ -855,7 +860,7 @@ int ets_putc(int c)
 }
 
 /* function used with single characters, e.g. echoed input in shell */
-int putchar(int c)
+int __wrap_putchar(int c)
 {
     /* before gdbstub is initialized we simply send the char */
     if (!gdbstub_initialized) {
@@ -874,6 +879,12 @@ int putchar(int c)
     gdbPacketHex(c, 8);
     gdbPacketEnd();
     return c;
+}
+#else
+int __wrap_putchar(int c)
+{
+    extern int __real_putchar(int c);
+    return __real_putchar(c);
 }
 #endif
 
@@ -909,25 +920,25 @@ static void ATTR_GDBFN uart_hdlr(void *arg)
     XtExcFrame* frame = (XtExcFrame *)sched_active_thread->sp;
 
     int doDebug=0;
-    int fifolen=0;
 
     /* Save the extra registers the standard exception handlers don't save */
     gdbstub_save_extra_sfrs_for_exception();
 
-    fifolen = (READ_PERI_REG(UART_STATUS(0)) >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT;
-    while (fifolen != 0)
+    while ((READ_PERI_REG(UART_STATUS(0)) >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT)
     {
         uint8_t data = READ_PERI_REG(UART_FIFO(0)) & 0xff;
         if (data == 0x03) {
             /* if char is control-C, break execution and do in debug mode */
             doDebug=1;
         }
+        else if (data == '$') {
+            gdbReadCommand(true);
+        }
         else if (data != '+' && data != '-' && !_gdbstub_in_rcv_packet) {
             /* if char is not '+' (gdb ack/nak), forward it to stdio */
             extern isrpipe_t stdio_uart_isrpipe;
             isrpipe_write_one(&stdio_uart_isrpipe, data);
         }
-        fifolen--;
     }
     WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_FULL_INT_CLR | UART_RXFIFO_TOUT_INT_CLR);
 
@@ -942,7 +953,7 @@ static void ATTR_GDBFN uart_hdlr(void *arg)
         ets_wdt_disable();
 
         sendReason();
-        while (gdbReadCommand() != ST_CONT) { }
+        while (gdbReadCommand(false) != ST_CONT) { }
 
         ets_wdt_enable();
 
@@ -968,20 +979,65 @@ extern bool _esp_output_active;
 /* gdbstub initialization routine. */
 void ATTR_GDBINIT gdbstub_init(void)
 {
-    #if GDBSTUB_CTRLC_BREAK
+#if GDBSTUB_CTRLC_BREAK
     install_uart_hdlr();
-    #endif
+#endif
 
     install_exceptions();
     gdbstub_init_debug_entry();
     gdbstub_initialized = true;
 
-    #if GDBSTUB_BREAK_ON_INIT
+#if GDBSTUB_BREAK_ON_INIT
     /* before break, PS.INTLEVEL has to be set correctly to allow debug exceptions */
     uint32_t _old_intlevel;
     __asm__ volatile ("rsil %0, " XTSTR(XCHAL_DEBUGLEVEL - 1) : "=a" (_old_intlevel));
     (void)_old_intlevel;
     /* now lets break on init */
     gdbstub_do_break();
-    #endif
+#endif
 }
+
+void __wrap_stdio_init(void)
+{
+#if GDBSTUB_CTRLC_BREAK
+    uart_init(STDIO_UART_DEV, STDIO_UART_BAUDRATE, NULL, NULL);
+    install_uart_hdlr();
+#else /* GDBSTUB_CTRLC_BREAK */
+#ifdef MODULE_STDIO_UART_RX
+    extern isrpipe_t stdio_uart_isrpipe;
+    uart_rx_cb_t cb = (uart_rx_cb_t) isrpipe_write_one;
+    void *arg = &stdio_uart_isrpipe;
+#else /* MODULE_STDIO_UART_RX */
+    uart_rx_cb_t cb = NULL;
+    void *arg = NULL;
+#endif /* MODULE_STDIO_UART_RX */
+    uart_init(STDIO_UART_DEV, STDIO_UART_BAUDRATE, cb, arg);
+#endif /* GDBSTUB_CTRLC_BREAK */
+}
+
+ssize_t __wrap_stdio_read(void* buffer, size_t count)
+{
+#ifdef MODULE_STDIO_UART_RX
+    extern isrpipe_t stdio_uart_isrpipe;
+    return (ssize_t)isrpipe_read(&stdio_uart_isrpipe, buffer, count);
+#else
+    (void)buffer;
+    (void)count;
+    return -ENOTSUP;
+#endif
+}
+
+ssize_t __wrap_stdio_write(const void* buffer, size_t len)
+{
+#if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
+    /* redirect the stdio as remote packets to GDB */
+    assert(buffer);
+    for (size_t i = 0; i < len; i++) {
+        ets_putc(((const uint8_t *)buffer)[i]);
+    }
+#else
+    uart_write(STDIO_UART_DEV, (const uint8_t *)buffer, len);
+#endif
+    return len;
+}
+

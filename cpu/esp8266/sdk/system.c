@@ -19,9 +19,13 @@
 
 #include "sdk/sdk.h"
 
+#include "driver/rtc.h"
 #include "esp/dport_regs.h"
 #include "esp_sleep.h"
 #include "esp_system.h"
+#include "periph/rtt.h"
+#include "periph/pm.h"
+#include "pm_layered.h"
 
 uint32_t system_get_chip_id(void)
 {
@@ -36,21 +40,21 @@ const char* system_get_sdk_version(void)
 
 void system_deep_sleep(uint32_t time_in_us)
 {
-    /* TODO test */
-    esp_deep_sleep(time_in_us);
+    rtt_set_alarm(rtt_get_counter() + RTT_US_TO_TICKS(time_in_us), NULL, NULL);
+    pm_set(ESP_PM_DEEP_SLEEP);
 }
 
 void system_restart(void)
 {
-    esp_restart();
+    pm_reboot();
 }
 
 void system_update_cpu_freq(uint8_t freq)
 {
     if (freq == 160) {
-        rtc_clk_cpu_freq_set(RTC_CPU_FREQ_160M);
+        esp_set_cpu_freq(ESP_CPU_FREQ_160M);
     }
     else {
-        rtc_clk_cpu_freq_set(RTC_CPU_FREQ_80M);
+        esp_set_cpu_freq(ESP_CPU_FREQ_80M);
     }
 }
