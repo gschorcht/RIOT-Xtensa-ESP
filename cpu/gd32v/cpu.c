@@ -24,6 +24,9 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
+#undef MCAUSE_CAUSE /* redefined in NMSIS header */
+#include "core_feature_base.h"
+
 extern void __libc_init_array(void);
 
 void cpu_init(void)
@@ -35,4 +38,18 @@ void cpu_init(void)
     riscv_init();
     early_init();
     periph_init();
+}
+
+void sched_arch_idle(void)
+{
+#if 0 // #ifdef MODULE_PM_LAYERED
+    void pm_set_lowest(void);
+    pm_set_lowest();
+#else
+    __WFI();
+#endif
+    __enable_irq();
+    /* read/write memory barrier */
+    __RWMB();
+    __disable_irq();
 }

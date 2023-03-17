@@ -10,6 +10,7 @@ config CPU_FAM_GD32V
     select CPU_CORE_RV32IMAC
     select HAS_ARCH_NUCLEI
     select HAS_CPU_GD32V
+    select HAS_NO_IDLE_THREAD
     select HAS_PERIPH_CLIC
     select HAS_PERIPH_GPIO
     select HAS_PERIPH_GPIO_IRQ
