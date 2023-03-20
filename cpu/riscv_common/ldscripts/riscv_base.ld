@@ -224,7 +224,8 @@ SECTIONS
   PROVIDE( end = . );
   PROVIDE( _sheap = . );
 
-  .stack ORIGIN(ram) + LENGTH(ram) - __stack_size :
+  /* keep 4 bytes free at the top of the RAM for riotboot magic number */
+  .stack ORIGIN(ram) + LENGTH(ram) - __stack_size - 4:
   {
     PROVIDE( _eheap = . );
     . = __stack_size;
