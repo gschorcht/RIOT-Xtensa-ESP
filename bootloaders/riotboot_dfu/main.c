@@ -34,6 +34,23 @@
 #include "periph/gpio.h"
 #endif
 
+#ifdef MODULE_CORE_IDLE_THREAD
+#include "periph/pm.h"
+
+static char idle_stack[THREAD_STACKSIZE_IDLE];
+
+static void *idle_thread(void *arg)
+{
+    (void)arg;
+
+    while (1) {
+        pm_set_lowest();
+    }
+
+    return NULL;
+}
+#endif
+
 static bool _bootloader_alternative_mode(void)
 {
 #if defined (BTN_BOOTLOADER_PIN) && defined (BTN_BOOTLOADER_MODE)
@@ -73,6 +90,13 @@ void kernel_init(void)
             slot = i;
         }
     }
+
+#ifdef MODULE_CORE_IDLE_THREAD
+    thread_create(idle_stack, sizeof(idle_stack),
+                  THREAD_PRIORITY_IDLE,
+                  THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
+                  idle_thread, NULL, "idle");
+#endif
 
     /* Init ztimer before starting DFU mode */
     ztimer_init();
