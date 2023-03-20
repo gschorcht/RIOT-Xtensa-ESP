@@ -229,7 +229,6 @@ config MODULE_TINYUSB_DFU
 config MODULE_RIOTBOOT_TINYUSB_DFU
     # TODO move to sys/riotboot/Kconfig once it is modelled
     bool "tinyUSB DFU variant of riotboot bootloader"
-    depends on HAS_NO_IDLE_THREAD
     depends on HAS_PERIPH_PM
     select MODULE_RIOTBOOT_FLASHWRITE
     select MODULE_TINYUSB_DFU

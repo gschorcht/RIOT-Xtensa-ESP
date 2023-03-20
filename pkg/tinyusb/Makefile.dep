@@ -9,7 +9,6 @@ USEMODULE += tinyusb_hw
 DEFAULT_MODULE += auto_init_tinyusb
 
 ifneq (,$(filter riotboot_tinyusb_dfu, $(USEMODULE)))
-  FEATURES_REQUIRED += no_idle_thread
   FEATURES_REQUIRED += periph_pm
   USEMODULE += riotboot_flashwrite
   USEMODULE += tinyusb_dfu
