@@ -12,7 +12,7 @@ endif
 ifneq (,$(filter mtd,$(USEMODULE)))
   FEATURES_REQUIRED += periph_spi_on_qspi
   USEMODULE += mtd_spi_nor
-  USEMODULE += mtd_sdcard_default
+  USEMODULE += sam0_sdhc
 endif
 
 # setup the samd21 arduino bootloader related dependencies

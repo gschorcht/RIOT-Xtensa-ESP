@@ -66,3 +66,32 @@ VFS_AUTO_MOUNT(littlefs2, VFS_MTD(samd51_nor_dev), VFS_DEFAULT_NVM(0), 0);
 #endif
 
 #endif /* MODULE_MTD_SPI_NOR */
+
+#ifdef MODULE_SAM0_SDHC
+
+#include "mtd_sam0_sdhc.h"
+
+static mtd_sam0_sdhc_t sdhc_dev = {
+        .base = {
+            .driver = &mtd_sam0_sdhc_driver,
+        },
+        .state = {
+            .dev = SDHC1,
+            .cd  = GPIO_PIN(PB, 16),
+            .wp  = GPIO_UNDEF,
+        },
+    };
+
+mtd_dev_t *mtd1 = (mtd_dev_t *)&sdhc_dev;
+
+#ifdef MODULE_VFS_DEFAULT
+/* default to FAT */
+#if defined(MODULE_FATFS_VFS)
+VFS_AUTO_MOUNT(fatfs, VFS_MTD(sdhc_dev), VFS_DEFAULT_SD(0), 1);
+/* but also support ext2/3/4 */
+#elif defined(MODULE_LWEXT4)
+VFS_AUTO_MOUNT(lwext4, VFS_MTD(sdhc_dev), VFS_DEFAULT_SD(0), 1);
+#endif
+#endif /* MODULE_VFS_DEFAULT */
+
+#endif /* MODULE_SAM0_SDHC */
