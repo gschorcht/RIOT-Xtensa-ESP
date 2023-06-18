@@ -1,0 +1,25 @@
+include ../Makefile.drivers_common
+
+USEMODULE += sam0_sdhc
+
+USEMODULE += fmt
+USEMODULE += shell
+
+SDHC_DEV ?= "SDHC1"
+SDHC_CD ?= "GPIO_PIN(PD, 20)"
+SDHC_WP ?= "GPIO_PIN(PD, 21)"
+
+USE_CLOCK_100MHZ ?= 1
+USE_HIGH_SPEED ?= 1
+
+OUTPUT ?= 1
+
+CFLAGS += -DSDHC_DEV=$(SDHC_DEV) -DSDHC_CD=$(SDHC_CD) -DSDHC_WP=$(SDHC_WP)
+CFLAGS += -DSDHC_ENABLE_HS=$(USE_HIGH_SPEED)
+CFLAGS += -DOUTPUT=$(OUTPUT)
+
+ifeq (1,$(USE_CLOCK_100MHZ))
+  CFLAGS += -DSDHC_CLOCK=SAM0_GCLK_100MHZ
+endif
+
+include $(RIOTBASE)/Makefile.include
