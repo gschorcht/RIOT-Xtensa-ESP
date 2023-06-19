@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "macros/math.h"
 #include "periph_cpu.h"
 #include "periph/pm.h"
 #include "vendor/sd_mmc_protocol.h"
@@ -441,33 +442,12 @@ static void _set_speed(sdhc_state_t *state, uint32_t fsdhc)
         SDHC_DEV->CCR.reg &= ~SDHC_CCR_SDCLKEN;
     }
 
-    /* since both examples use divided clock rather than programmable - just use divided here */
-    SDHC_DEV->CCR.reg &= ~SDHC_CCR_CLKGSEL;     /* divided clock */
-
-    /* According to the data sheet the divided clock is given by
-     *
-     *        Fsdclk = Fsdhc_core/(2 * div)
-     *
-     * Hovewer, this seems to be wrong since the SD CLK is always exactly the half.
-     * So it seems that the clock is given by
-     *
-     *        Fsdclk = Fsdhc_core/(4 * div)
-     */
-    if (SDHC_CLOCK == SAM0_GCLK_100MHZ) {
-        /* if the FDPLL1 with 100 MHz is used, we can use 25 MHz/50 MHz clocks */
-        div = (sam0_gclk_freq(SDHC_CLOCK) / fsdhc) / 4;
-    }
-    else {
-        div = (sam0_gclk_freq(SDHC_CLOCK) / fsdhc) / 2;
-
-        /* high speed div must not be 0 */
-        if (SDHC_DEV->HC1R.bit.HSEN && (div == 0)) {
-            div = 1;
-        }
-    }
+    /* divider for programmable clock: f_sdclk = f_baseclk / (div + 1) */
+    div = DIV_ROUND_UP(sam0_gclk_freq(SDHC_CLOCK), fsdhc) - 1;
 
     /* write the 10 bit clock divider */
     SDHC_DEV->CCR.reg &= ~(SDHC_CCR_USDCLKFSEL_Msk | SDHC_CCR_SDCLKFSEL_Msk);
+    SDHC_DEV->CCR.reg |= SDHC_CCR_CLKGSEL;   /* enable programable clock */
     SDHC_DEV->CCR.reg |= SDHC_CCR_SDCLKFSEL(div) | SDHC_CCR_USDCLKFSEL(div >> 8);
     SDHC_DEV->CCR.reg |= SDHC_CCR_INTCLKEN;  /* enable internal clock       */
     while (!SDHC_DEV->CCR.bit.INTCLKS) {}    /* wait for clock to be stable */
