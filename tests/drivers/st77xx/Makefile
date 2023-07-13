@@ -2,7 +2,7 @@ BOARD ?= stm32f429i-disc1
 
 include ../Makefile.drivers_common
 
-USEMODULE += st7735
+USEMODULE += st77xx
 USEMODULE += ztimer
 USEMODULE += ztimer_msec
 
