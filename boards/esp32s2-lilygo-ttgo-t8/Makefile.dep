@@ -13,11 +13,11 @@ ifneq (,$(filter vfs_default,$(USEMODULE)))
 endif
 
 ifneq (,$(filter disp_dev,$(USEMODULE)))
-  USEMODULE += st7789
+  USEMODULE += st77xx
 endif
 
-ifneq (,$(filter st7735,$(USEMODULE)))
-  # use st7789 pseudomodule if st7735 is enabled to indicate that we use a ST7789
+ifneq (,$(filter st77xx,$(USEMODULE)))
+  # indicate that a ST7789 is used
   USEMODULE += st7789
 endif
 
