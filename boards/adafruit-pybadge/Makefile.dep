@@ -3,6 +3,11 @@ ifneq (,$(filter saul_default,$(USEMODULE)))
 endif
 
 ifneq (,$(filter disp_dev,$(USEMODULE)))
+  USEMODULE += st77xx
+endif
+
+ifneq (,$(filter st77xx,$(USEMODULE)))
+  # indicate that a ST7735 is used
   USEMODULE += st7735
 endif
 
