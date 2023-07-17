@@ -56,6 +56,10 @@ static int _init(lcd_t *dev, const lcd_params_t *params)
     lcd_ll_write_cmd(dev, LCD_CMD_SLPOUT, NULL, 0);
     ztimer_sleep(ZTIMER_MSEC, 120);
 
+    /* COLMOD (3Ah): Interface Pixel Format */
+    command_params[0] = 0x55; /* 16 bit mode RGB & Control */
+    lcd_ll_write_cmd(dev, LCD_CMD_COLMOD, command_params, 1);
+
     /* controller sepecific initialization part called */
     if (IS_USED(MODULE_ST7735) && (params->cntrl == ST77XX_CNTRL_ST7735)) {
         DEBUG("ST7735 used ...\n");
@@ -82,10 +86,6 @@ static int _init(lcd_t *dev, const lcd_params_t *params)
 
 #endif /* no need to write reset defaults, just for documentation purpose */
 
-    /* COLMOD (3Ah): Interface Pixel Format */
-    command_params[0] = 0x055; /* 16 bit mode RGB & Control */
-    lcd_ll_write_cmd(dev, LCD_CMD_COLMOD, command_params, 1);
-
     /* MADCTL (36h): Memory Data Access Control */
     command_params[0] = dev->params->rotation;
     command_params[0] |= dev->params->rgb ? 0 : LCD_MADCTL_BGR;
@@ -96,9 +96,6 @@ static int _init(lcd_t *dev, const lcd_params_t *params)
         /* INVON (21h): Display Inversion On */
         lcd_ll_write_cmd(dev, LCD_CMD_DINVON, NULL, 0);
     }
-
-    /* Sleep out (turn off sleep mode) */
-    lcd_ll_write_cmd(dev, LCD_CMD_SLPOUT, NULL, 0);
 
     /* Normal display mode on */
     lcd_ll_write_cmd(dev, LCD_CMD_NORON, NULL, 0);
