@@ -14,20 +14,13 @@
  *
  * @brief       Driver for displays with a ST77xx display controller
  *
- * @{
- *
- * @file
- *
- * @author      Koen Zandberg <koen@bergzand.net>
- * @author      Francisco Molina <francois-xavier.molina@inria.fr>
- * @author      Gunar Schorcht <gunar@schorcht.net>
- *
  * The ST77xx display controller driver is a driver for small RGB displays
  * using a ST77xx display controller. The driver supports ST7735, ST7789 and
  * ST7796. The support of the respective controller is enabled by the
- * corresponding module 'st7735', 'st7789' or 'st7796'. The ST77xx controller
+ * corresponding module `st7735`, `st7789` or `st7796`. The ST77xx controller
  * used by a display must be specified in the board definition in parameter
- * `lcd_param_t::controller`.
+ * @ref lcd_param_t::controller or as macro @ref ST77XX_PARAM_CNTRL if the
+ * default parameter set @ref ST77XX_PARAMS is used.
  *
  * The driver uses the SPI serial interface to communicate with the display
  * controller.
@@ -37,6 +30,14 @@
  * when strictly necessary. This option will slow down the driver as it
  * certainly can't use DMA anymore, every short has to be converted before
  * transfer.
+ *
+ * @{
+ *
+ * @file
+ *
+ * @author      Koen Zandberg <koen@bergzand.net>
+ * @author      Francisco Molina <francois-xavier.molina@inria.fr>
+ * @author      Gunar Schorcht <gunar@schorcht.net>
  */
 
 #ifndef ST77XX_H
