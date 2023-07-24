@@ -3,7 +3,7 @@ ifneq (,$(filter saul_default,$(USEMODULE)))
 endif
 
 ifneq (,$(filter disp_dev,$(USEMODULE)))
-  USEMODULE += st77xx
+  USEMODULE += st7735
 endif
 
 ifneq (,$(filter st77xx,$(USEMODULE)))
