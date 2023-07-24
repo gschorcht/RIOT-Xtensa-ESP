@@ -24,7 +24,7 @@ ifneq (,$(filter mtd,$(USEMODULE)))
 endif
 
 ifneq (,$(filter disp_dev,$(USEMODULE)))
-  USEMODULE += st77xx
+  USEMODULE += st7789
 endif
 
 ifneq (,$(filter st77xx,$(USEMODULE)))
