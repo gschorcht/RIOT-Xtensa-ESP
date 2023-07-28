@@ -15,7 +15,7 @@ config MODULE_ST7789
 
 if MODULE_ST7789
 
-config ST7789_CUSTOM_CONFIG
+menuconfig ST7789_CUSTOM_CONFIG
     bool "ST7789 Custom Configuration"
     help
         Enable if customized configuration of voltages are needed. Otherwise

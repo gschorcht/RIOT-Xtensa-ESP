@@ -9,13 +9,13 @@ if MODULE_ST77XX
 
 config MODULE_ST7735
     bool "ST7735 display"
-    default y if !MODULE_ST7789 && !MODULE_ST7796
+    default y if HAVE_ST7735
     help
         ST7735 display controller is used
 
 if MODULE_ST7735
 
-config ST7735_CUSTOM_CONFIG
+menuconfig ST7735_CUSTOM_CONFIG
     bool "ST7735 Custom Configuration"
     help
         Enable if customized configuration of voltages are needed. Otherwise
