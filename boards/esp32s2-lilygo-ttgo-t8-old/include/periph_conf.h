@@ -100,4 +100,3 @@ extern "C" {
 
 #endif /* PERIPH_CONF_H */
 /** @} */
-
