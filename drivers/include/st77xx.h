@@ -19,7 +19,7 @@
  * ST7796. The support of the respective controller is enabled by the
  * corresponding module `st7735`, `st7789` or `st7796`. The ST77xx controller
  * used by a display must be specified in the board definition in parameter
- * @ref lcd_param_t::cntrl or as macro @ref ST77XX_PARAM_CNTRL if the
+ * @ref lcd_params_t::cntrl or as macro @ref ST77XX_PARAM_CNTRL if the
  * default parameter set @ref ST77XX_PARAMS is used.
  *
  * The driver uses the SPI serial interface to communicate with the display
