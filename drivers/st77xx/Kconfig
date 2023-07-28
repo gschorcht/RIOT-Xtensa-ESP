@@ -7,6 +7,7 @@
 
 menuconfig MODULE_ST77XX
     bool "ST77xx display driver"
+    default y if MODULE_DISP_DEV && HAVE_ST77XX
     depends on HAS_PERIPH_SPI
     depends on HAS_PERIPH_GPIO
     depends on TEST_KCONFIG
@@ -23,27 +24,23 @@ rsource "Kconfig.st7796"
 
 config HAVE_ST77XX
     bool
-    select MODULE_ST77XX if MODULE_DISP_DEV
     help
         Indicates that a ST77XX display is present.
 
 config HAVE_ST7735
     bool
     select HAVE_ST77XX
-    select MODULE_ST7735 if MODULE_ST77XX
     help
         Indicates that a ST7735 display is present.
 
 config HAVE_ST7789
     bool
     select HAVE_ST77XX
-    select MODULE_ST7789 if MODULE_ST77XX
     help
         Indicates that a ST7789 display is present.
 
 config HAVE_ST7796
     bool
     select HAVE_ST77XX
-    select MODULE_ST7796 if MODULE_ST77XX
     help
         Indicates that a ST7796 display is present.
