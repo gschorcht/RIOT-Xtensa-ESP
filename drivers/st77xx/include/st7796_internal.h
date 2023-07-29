@@ -20,8 +20,8 @@
  * @}
  */
 
-#ifndef ST7789_INTERNAL_H
-#define ST7789_INTERNAL_H
+#ifndef ST7796_INTERNAL_H
+#define ST7796_INTERNAL_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,4 +48,4 @@ int st7796_init(lcd_t *dev, const lcd_params_t *params);
 }
 #endif
 
-#endif /* ST7789_INTERNAL_H */
+#endif /* ST7796_INTERNAL_H */
