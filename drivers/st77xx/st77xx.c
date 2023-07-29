@@ -60,7 +60,7 @@ static int _init(lcd_t *dev, const lcd_params_t *params)
     command_params[0] = 0x55; /* 16 bit mode RGB & Control */
     lcd_ll_write_cmd(dev, LCD_CMD_COLMOD, command_params, 1);
 
-    /* controller sepecific initialization part called */
+    /* controller specific initialization part called */
     if (IS_USED(MODULE_ST7735) && (params->cntrl == ST77XX_CNTRL_ST7735)) {
         DEBUG("ST7735 used ...\n");
         st7735_init(dev, params);
