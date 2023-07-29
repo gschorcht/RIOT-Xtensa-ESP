@@ -16,7 +16,7 @@ config MODULE_LCD
 config MODULE_LCD_MULTI_CNTRL
     bool
     help
-        The Controller-specific driver supports multiple controller variants.
+        The controller-specific driver supports multiple controller variants.
 
 menuconfig KCONFIG_USEMODULE_LCD
     bool "Configure LCD driver"
