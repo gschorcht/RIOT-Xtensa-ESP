@@ -6,9 +6,9 @@
 # directory for more details.
 
 config BOARD
-    default "esp32s2-lilygo-ttgo-t8" if BOARD_ESP32S2_LILYGO_TTGO_T8
+    default "esp32s2-lilygo-ttgo-t8-old" if BOARD_ESP32S2_LILYGO_TTGO_T8_OLD
 
-config BOARD_ESP32S2_LILYGO_TTGO_T8
+config BOARD_ESP32S2_LILYGO_TTGO_T8_OLD
     bool
     default y
     select BOARD_COMMON_ESP32S2
@@ -26,14 +26,14 @@ config BOARD_ESP32S2_LILYGO_TTGO_T8
     select HAS_SDCARD_SPI
     select HAS_TINYUSB_DEVICE
     select HAVE_MTD_SDCARD_DEFAULT
-    select HAVE_ST7789
+    select HAVE_ST7735
     select MODULE_FATFS_VFS if MODULE_VFS_DEFAULT
 
 config FORCE_USB_STDIO
     default y if ESP32S2_LILYGO_TTGO_T8_USB
 
 menu "LILYGO TTGO T8 ESP32-S2 Board configurations"
-    depends on BOARD_ESP32S2_LILYGO_TTGO_T8
+    depends on BOARD_ESP32S2_LILYGO_TTGO_T8_OLD
 
     config ESP32S2_LILYGO_TTGO_T8_USB
         bool "USB interface is used instead of USB-to-UART bridge"
