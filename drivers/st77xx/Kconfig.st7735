@@ -9,7 +9,7 @@ if MODULE_ST77XX
 
 config MODULE_ST7735
     bool "ST7735 display"
-    default y if HAVE_ST7735
+    default y if !MODULE_ST7789 && !MODULE_ST7796
     help
         ST7735 display controller is used
 
