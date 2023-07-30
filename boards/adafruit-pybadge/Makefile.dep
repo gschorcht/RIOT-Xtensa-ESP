@@ -6,11 +6,6 @@ ifneq (,$(filter disp_dev,$(USEMODULE)))
   USEMODULE += st7735
 endif
 
-ifneq (,$(filter st77xx,$(USEMODULE)))
-  # indicate that a ST7735 is used
-  USEMODULE += st7735
-endif
-
 ifneq (,$(filter mtd,$(USEMODULE)))
   FEATURES_REQUIRED += periph_spi_on_qspi
   USEMODULE += mtd_spi_nor
