@@ -2,8 +2,19 @@ BOARD ?= stm32f429i-disc1
 
 include ../Makefile.drivers_common
 
-ifneq (,$(filter esp32s2-lilygo-ttgo-t8 esps3-usb-otg,$(BOARD)))
+ST7789_BOARDS = \
+  esp32s2-lilygo-ttgo-t8 \
+  esps3-usb-otg \
+  #
+
+ST7796_BOARDS = \
+  #
+
+ifneq (,$(filter $(ST7789_BOARDS),$(BOARD)))
   DRIVER ?= st7789
+endif
+ifneq (,$(filter $(ST7796_BOARDS),$(BOARD)))
+  DRIVER ?= st7796
 endif
 
 DRIVER ?= st7735
