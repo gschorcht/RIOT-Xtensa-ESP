@@ -2,7 +2,13 @@ BOARD ?= stm32f429i-disc1
 
 include ../Makefile.drivers_common
 
-USEMODULE += st77xx
+ifneq (,$(filter esp32s2-lilygo-ttgo-t8 esps3-usb-otg,$(BOARD)))
+  DRIVER ?= st7789
+endif
+
+DRIVER ?= st7735
+
+USEMODULE += $(DRIVER)
 USEMODULE += ztimer
 USEMODULE += ztimer_msec
 
