@@ -9,6 +9,7 @@ if MODULE_ST77XX
 
 config MODULE_ST7789
     bool "ST7789 display"
+    default y if HAVE_ST7789
     help
         ST7789 display controller is used
 
