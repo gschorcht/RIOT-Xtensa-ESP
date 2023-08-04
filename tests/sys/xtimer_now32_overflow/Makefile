@@ -10,6 +10,7 @@ BOARD_BLACKLIST += \
                    esp32s2-wemos-mini \
                    feather-nrf52840 \
                    hamilton \
+                   lilygo-t-display-gd32 \
                    mulle \
                    pinetime \
                    ruuvitag \
