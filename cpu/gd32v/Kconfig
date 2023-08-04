@@ -36,6 +36,10 @@ config CPU_FAM_GD32V
 
 menu "GD32V configuration"
 
+config CPU_MODEL_GD32VF103C8T6
+    bool
+    select CPU_FAM_GD32V
+
 config CPU_MODEL_GD32VF103CBT6
     bool
     select CPU_FAM_GD32V
@@ -52,6 +56,9 @@ config HAS_CPU_GD32V
 
 config CPU_FAM
     default "gd32v" if CPU_FAM_GD32V
+
+config CPU_MODEL
+    default "gd32vf103c8t6"  if CPU_MODEL_GD32VF103C8T6
 
 config CPU_MODEL
     default "gd32vf103cbt6"  if CPU_MODEL_GD32VF103CBT6
