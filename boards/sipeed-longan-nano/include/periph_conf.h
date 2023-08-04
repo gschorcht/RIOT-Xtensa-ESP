@@ -33,8 +33,12 @@
 #define CONFIG_CLOCK_HXTAL      MHZ(8)      /**< HXTAL frequency */
 #endif
 
-#if MODULE_SIPEED_LONGAN_NANO_TFT
-#define SPI_DEV_1_USED              /**< Enable SPI_DEV(1) if TFT is connected */
+#ifndef SPI_DEV_1_USED
+#define SPI_DEV_1_USED          MODULE_SIPEED_LONGAN_NANO_TFT   /**< Enable SPI_DEV(1) for TFT */
+#endif
+
+#ifndef I2C_DEV_1_USED
+#define I2C_DEV_1_USED          1   /**< Enable I2C_DEV(1) by default */
 #endif
 
 #include "periph_cpu.h"
