@@ -37,8 +37,7 @@ config FORCE_USB_STDIO
     default y
 
 config MODULE_SIPEED_LONGAN_NANO_TFT
-    bool "Sipeed Longan Nano with TFT"
-    default y
+    bool
     help
         Indicates that the board is a Sipeed Longan Nano board with TFT display.
 
