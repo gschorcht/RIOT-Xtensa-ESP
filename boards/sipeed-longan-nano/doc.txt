@@ -100,11 +100,15 @@ by pins.
 (*) The availability of these peripherals depend on the use of other peripherals.
 
 \n
-@note To use the TFT display of a Sipeed Longan Nano board, if available, the
-module `sipeed_longan_nano_tft` has to be enabled, for
-example using the `USEMODULE` variable in the make command:
+@note To use the TFT display version of the Sipeed Longan Nano board, either
+enable the `sipeed_longan_nano_tft` module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 BOARD=sipeed-longan-nano USEMODULE=sipeed_longan_nano_tft make ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+or use the `sipeed-longan-nano-tft` board definition which simply enables
+the `sipeed_longan_nano_tft` module.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+BOARD=sipeed-longan-nano-tft make ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | Pin  | Board Function | RIOT Function 1 | RIOT Function 2 | RIOT Function 3 |

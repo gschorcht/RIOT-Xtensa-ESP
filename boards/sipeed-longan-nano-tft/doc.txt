@@ -16,6 +16,6 @@ that is equipped with a TFT display with the following on-board components:
 
 @image html "https://media-cdn.seeedstudio.com/media/catalog/product/cache/7f7f32ef807b8c2c2215b49801c56084/1/1/114992425_1.jpg" "Sipeed Longan Nano" width=600
 
-Detailed information about board configuration and flashing can be found in the
-\ref sipeed_longan_nano "Sipeed Longan Nano" documentation.
+Detailed information about the board configuration and flashing can be found
+in the \ref sipeed_longan_nano "Sipeed Longan Nano" documentation.
 */
