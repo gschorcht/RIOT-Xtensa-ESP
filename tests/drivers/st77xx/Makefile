@@ -5,6 +5,7 @@ include ../Makefile.drivers_common
 ST7789_BOARDS = \
   esp32s2-lilygo-ttgo-t8 \
   esp32s3-usb-otg \
+  lilygo-t-display-gd32 \
   #
 
 ST7796_BOARDS = \
