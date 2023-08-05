@@ -1,3 +1,4 @@
 BOARD_INSUFFICIENT_MEMORY := \
+    lilygo-t-display-gd32 \
     stm32f7508-dk \
     #

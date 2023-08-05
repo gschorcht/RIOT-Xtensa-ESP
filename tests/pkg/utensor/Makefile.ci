@@ -10,6 +10,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     cc2650stk \
     i-nucleo-lrwan1 \
     im880b \
+    lilygo-t-display-gd32 \
     lobaro-lorabox \
     maple-mini \
     microbit \

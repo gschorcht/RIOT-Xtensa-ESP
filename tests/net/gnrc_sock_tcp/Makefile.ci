@@ -15,6 +15,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     hifive1b \
     i-nucleo-lrwan1 \
     im880b \
+    lilygo-t-display-gd32 \
     m1284p \
     mega-xplained \
     microduino-corerf \

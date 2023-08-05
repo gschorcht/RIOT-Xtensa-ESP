@@ -35,6 +35,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     i-nucleo-lrwan1 \
     ikea-tradfri \
     im880b \
+    lilygo-t-display-gd32 \
     limifrog-v1 \
     lobaro-lorabox \
     lora-e5-dev \

@@ -6,6 +6,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     hifive1 \
     hifive1b \
     i-nucleo-lrwan1 \
+    lilygo-t-display-gd32 \
     nrf6310 \
     nucleo-f030r8 \
     nucleo-f031k6 \

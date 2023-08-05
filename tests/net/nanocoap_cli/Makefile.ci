@@ -11,6 +11,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     atxmega-a1u-xpro \
     bluepill-stm32f030c8 \
     i-nucleo-lrwan1 \
+    lilygo-t-display-gd32 \
     mega-xplained \
     microduino-corerf \
     msb-430 \
