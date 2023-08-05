@@ -11,6 +11,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     bluepill-stm32f030c8 \
     derfmega128 \
     i-nucleo-lrwan1 \
+    lilygo-t-display-gd32 \
     microduino-corerf \
     msb-430 \
     msb-430h \

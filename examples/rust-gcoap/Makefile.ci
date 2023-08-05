@@ -6,6 +6,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     calliope-mini \
     im880b \
     i-nucleo-lrwan1 \
+    lilygo-t-display-gd32 \
     microbit \
     nrf51dongle \
     nrf6310 \

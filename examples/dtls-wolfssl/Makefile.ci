@@ -12,6 +12,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     hifive1b \
     i-nucleo-lrwan1 \
     im880b \
+    lilygo-t-display-gd32 \
     lobaro-lorabox \
     microbit \
     nrf51dongle \

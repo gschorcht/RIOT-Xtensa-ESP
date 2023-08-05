@@ -13,6 +13,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     derfmega128 \
     i-nucleo-lrwan1 \
     im880b \
+    lilygo-t-display-gd32 \
     microduino-corerf \
     msb-430 \
     msb-430h \
