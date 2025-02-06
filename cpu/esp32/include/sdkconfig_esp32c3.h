@@ -56,17 +56,25 @@ extern "C" {
 #ifndef CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ
 #define CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ     80
 #endif
+
+/**
+ * Default CPU frequency symbol used by the ESP-IDF
+ */
+#define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ         CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ
 /** @} */
 
 /**
  * ESP32-C3 specific RTC clock configuration
  */
 #define CONFIG_ESP32C3_RTC_CLK_CAL_CYCLES       (8 * 1024)
+#define CONFIG_RTC_CLK_CAL_CYCLES               CONFIG_ESP32C3_RTC_CLK_CAL_CYCLES
 
 /**
  * ESP32-C3 specific EFUSE configuration
  */
 #define CONFIG_EFUSE_MAX_BLK_LEN                256
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MIN_FULL     0
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MAX_FULL     199
 
 /**
  * ESP32-C3 specific MAC configuration
@@ -91,8 +99,9 @@ extern "C" {
 /**
  * ESP32-C3 specific sleep configuration (DO NOT CHANGE)
  */
-#define CONFIG_ESP_SLEEP_POWER_DOWN_FLASH       1
-#define CONFIG_ESP_SLEEP_GPIO_RESET_WORKAROUND  1
+#define CONFIG_ESP_SLEEP_POWER_DOWN_FLASH               1
+#define CONFIG_ESP_SLEEP_GPIO_RESET_WORKAROUND          1
+#define CONFIG_ESP_SLEEP_WAIT_FLASH_READY_EXTRA_DELAY   0
 
 /**
  * ESP32-C3 specific USB configuration

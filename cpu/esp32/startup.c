@@ -43,7 +43,6 @@
 #include "periph/rtc.h"
 
 /* ESP-IDF headers */
-#include "driver/periph_ctrl.h"
 #include "esp_attr.h"
 #include "esp_clk_internal.h"
 #include "esp_heap_caps_init.h"
@@ -53,17 +52,14 @@
 #include "esp_rom_uart.h"
 #include "esp_sleep.h"
 #include "esp_timer.h"
-#include "hal/interrupt_controller_types.h"
-#include "hal/interrupt_controller_ll.h"
 #include "rom/cache.h"
 #include "rom/ets_sys.h"
 #include "rom/rtc.h"
 #include "rom/uart.h"
-#include "soc/apb_ctrl_reg.h"
-#include "soc/cpu.h"
 #include "soc/rtc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "soc/rtc_cntl_struct.h"
+#include "soc/syscon_reg.h"
 #include "soc/timer_group_struct.h"
 
 #if __xtensa__
@@ -74,7 +70,8 @@
 #endif
 
 #if IS_USED(MODULE_ESP_SPI_RAM)
-#include "spiram.h"
+// #include "spiram.h"
+#include "esp_private/esp_psram_extram.h"
 #endif
 
 #if IS_USED(MODULE_PUF_SRAM)
@@ -163,7 +160,7 @@ static NORETURN void IRAM system_startup_cpu0(void)
     uart_system_init();
 
     /* initialize stdio */
-    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
     early_init();
 
     RESET_REASON reset_reason = rtc_get_reset_reason(PRO_CPU_NUM);
@@ -223,6 +220,8 @@ static NORETURN void IRAM system_startup_cpu0(void)
     UNREACHABLE();
 }
 
+#include "esp_private/startup_internal.h"
+
 static NORETURN void IRAM system_init (void)
 {
     static_assert(MAXTHREADS >= 3,
@@ -251,8 +250,10 @@ static NORETURN void IRAM system_init (void)
 
     /* add SPI RAM to heap if enabled */
 #if CONFIG_SPIRAM_SUPPORT && CONFIG_SPIRAM_BOOT_INIT
-    esp_spiram_init_cache();
-    esp_spiram_add_to_heapalloc();
+    esp_psram_extram_add_to_heap_allocator();
+#if CONFIG_SPIRAM_USE_MALLOC
+    heap_caps_malloc_extmem_enable(CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL);
+#endif
 #endif
 
     /* print some infos */
@@ -307,8 +308,8 @@ static NORETURN void IRAM system_init (void)
     /* route a software interrupt source to CPU as trigger for thread yields */
     intr_matrix_set(PRO_CPU_NUM, ETS_FROM_CPU_INTR0_SOURCE, CPU_INUM_SOFTWARE);
     /* set thread yield handler and enable the software interrupt */
-    intr_cntrl_ll_set_int_handler(CPU_INUM_SOFTWARE, thread_yield_isr, NULL);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_SOFTWARE));
+    esp_cpu_intr_set_handler(CPU_INUM_SOFTWARE, thread_yield_isr, NULL);
+    esp_cpu_intr_enable(BIT(CPU_INUM_SOFTWARE));
 
     /* initialize ESP system event loop */
     extern void esp_event_handler_init(void);
@@ -320,7 +321,7 @@ static NORETURN void IRAM system_init (void)
     /* starting RIOT */
 #if IS_USED(MODULE_ESP_LOG_STARTUP)
     LOG_STARTUP("Starting RIOT kernel on PRO cpu\n");
-    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
 #else
     ets_printf("\n");
 #endif

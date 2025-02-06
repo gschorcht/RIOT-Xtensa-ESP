@@ -24,9 +24,12 @@
 #include "sdkconfig.h"
 #include "hal/ledc_types.h"
 #include "hal/spi_types.h"
+#include "hal/uart_types.h"
 #include "soc/ledc_struct.h"
 #include "soc/periph_defs.h"
 #include "soc/soc_caps.h"
+
+#include "modules.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -185,13 +188,22 @@ typedef enum {
     GPIO_PULL_STRONGEST = 0
 } gpio_pull_strength_t;
 
+#include "hal/gpio_types.h"
+
 #define HAVE_GPIO_PULL_T
+#if 0
 typedef enum {
     GPIO_FLOATING = 0,
     GPIO_PULL_UP = 1,
     GPIO_PULL_DOWN = 2,
     GPIO_PULL_KEEP = 3   /*< not supported */
 } gpio_pull_t;
+#else
+typedef gpio_pull_mode_t gpio_pull_t;
+#define GPIO_PULL_UP    GPIO_PULLUP_ONLY
+#define GPIO_PULL_DOWN  GPIO_PULLDOWN_ONLY
+#define GPIO_PULL_KEEP  GPIO_PULLUP_PULLDOWN
+#endif
 
 /**
  * @brief   Current an output pin can drive in active and sleep modes
@@ -915,9 +927,9 @@ typedef struct {
 #endif
 
 /** Timer group used for system time */
-#define TIMER_SYSTEM_GROUP      TIMER_GROUP_0
+#define TIMER_SYSTEM_GROUP      0   /* formerly TIMER_GROUP_0 */
 /** Index of the timer in the timer timer group used for system time */
-#define TIMER_SYSTEM_INDEX      TIMER_0
+#define TIMER_SYSTEM_INDEX      0   /* formerly TIMER_0 */
 /** System time interrupt source */
 #define TIMER_SYSTEM_INT_SRC    ETS_TG0_T0_LEVEL_INTR_SOURCE
 
@@ -977,6 +989,19 @@ typedef struct {
     gpio_t txd;             /**< GPIO used as TxD pin */
     gpio_t rxd;             /**< GPIO used as RxD pin */
 } uart_conf_t;
+
+/**
+ * @brief   UART stop bits type from ESP-IDF UART HAL must be used
+ */
+#define HAVE_UART_STOP_BITS_T
+
+/**
+ * @brief   UART data bits type from ESP-IDF UART HAL must be used
+ * @{
+ */
+#define HAVE_UART_PARITY_T
+#define UART_PARITY_NONE UART_PARITY_DISABLE
+/** @} */
 
 /**
  * @brief   Maximum number of UART interfaces

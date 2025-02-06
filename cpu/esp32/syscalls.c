@@ -32,10 +32,11 @@
 #include "sys/lock.h"
 #include "timex.h"
 
+#include "esp_cpu.h"
+#include "esp_private/periph_ctrl.h"
 #include "esp_rom_caps.h"
-#include "hal/interrupt_controller_types.h"
-#include "hal/interrupt_controller_ll.h"
 #include "hal/timer_hal.h"
+#include "hal/timer_ll.h"
 #include "hal/wdt_hal.h"
 #include "hal/wdt_types.h"
 #include "rom/ets_sys.h"
@@ -193,10 +194,10 @@ static struct syscall_stub_table s_stub_table =
 {
     .__getreent = &__getreent,
 
-    ._malloc_r = &_malloc_r,
-    ._free_r = &_free_r,
-    ._realloc_r = &_realloc_r,
-    ._calloc_r = &_calloc_r,
+    ._malloc_r = (void * (*)(struct _reent *, size_t))&_malloc_r,
+    ._free_r = (void (*)(struct _reent *, void *))&_free_r,
+    ._realloc_r = (void * (*)(struct _reent *, void *, size_t))&_realloc_r,
+    ._calloc_r = (void * (*)(struct _reent *, size_t,  size_t))&_calloc_r,
     ._sbrk_r = &_sbrk_r,
 
     ._system_r = (void*)&_no_sys_func,
@@ -254,7 +255,7 @@ static struct syscall_stub_table s_stub_table =
 
 timer_hal_context_t sys_timer = {
     .dev = TIMER_LL_GET_HW(TIMER_SYSTEM_GROUP),
-    .idx = TIMER_SYSTEM_INDEX,
+    .timer_id = TIMER_SYSTEM_INDEX,
 };
 
 #if defined(_RETARGETABLE_LOCKING)
@@ -278,12 +279,18 @@ extern struct __lock __attribute__((alias("s_shared_mutex"))) __lock___arc4rando
 
 void IRAM syscalls_init_arch(void)
 {
-    /* initialize and enable the system timer in us (TMG0 is enabled by default) */
-    timer_hal_init(&sys_timer, TIMER_SYSTEM_GROUP, TIMER_SYSTEM_INDEX);
-    timer_hal_set_divider(&sys_timer, rtc_clk_apb_freq_get() / MHZ);
-    timer_hal_set_counter_increase(&sys_timer, true);
-    timer_hal_set_auto_reload(&sys_timer, false);
-    timer_hal_set_counter_enable(&sys_timer, true);
+    /* initialize and enable the system timer in us */
+    periph_module_enable(PERIPH_TIMG0_MODULE);
+    timer_ll_set_clock_source(sys_timer.dev, sys_timer.timer_id, GPTIMER_CLK_SRC_DEFAULT);
+    timer_ll_enable_clock(sys_timer.dev, sys_timer.timer_id, true);
+    timer_ll_set_clock_prescale(sys_timer.dev, sys_timer.timer_id, rtc_clk_apb_freq_get() / MHZ);
+    timer_ll_set_count_direction(sys_timer.dev, sys_timer.timer_id, GPTIMER_COUNT_UP);
+    timer_ll_enable_auto_reload(sys_timer.dev, sys_timer.timer_id, false);
+    timer_ll_enable_counter(sys_timer.dev, sys_timer.timer_id, true);
+    timer_ll_enable_alarm(sys_timer.dev, sys_timer.timer_id, false);
+#if SOC_TIMER_SUPPORT_ETM
+    timer_ll_enable_etm(sys_timer.dev, true);
+#endif
 
 #if defined(CPU_FAM_ESP32)
     syscall_table_ptr_pro = &s_stub_table;
@@ -305,11 +312,10 @@ uint32_t system_get_time_ms(void)
     return system_get_time_64() / US_PER_MS;
 }
 
-int64_t system_get_time_64(void)
+uint64_t system_get_time_64(void)
 {
-    uint64_t ret;
-    timer_hal_get_counter_value(&sys_timer, &ret);
-    return ret;
+    timer_ll_trigger_soft_capture(sys_timer.dev, sys_timer.timer_id);
+    return timer_ll_get_counter_value(sys_timer.dev, sys_timer.timer_id);
 }
 
 wdt_hal_context_t mwdt;
@@ -355,32 +361,23 @@ void system_wdt_init(void)
     wdt_hal_write_protect_enable(&mwdt);
     wdt_hal_write_protect_enable(&rwdt);
 
-#if defined(CPU_FAM_ESP32)
-    DEBUG("%s TIMERG0 wdtconfig0=%08"PRIx32" wdtconfig1=%08"PRIx32
-          " wdtconfig2=%08"PRIx32" wdtconfig3=%08"PRIx32
-          " wdtconfig4=%08"PRIx32" regclk=%08"PRIx32"\n", __func__,
-          TIMERG0.wdt_config0.val, TIMERG0.wdt_config1.val,
-          TIMERG0.wdt_config2, TIMERG0.wdt_config3,
-          TIMERG0.wdt_config4, TIMERG0.clk.val);
-#else
     DEBUG("%s TIMERG0 wdtconfig0=%08"PRIx32" wdtconfig1=%08"PRIx32
           " wdtconfig2=%08"PRIx32" wdtconfig3=%08"PRIx32
           " wdtconfig4=%08"PRIx32" regclk=%08"PRIx32"\n", __func__,
           TIMERG0.wdtconfig0.val, TIMERG0.wdtconfig1.val,
           TIMERG0.wdtconfig2.val, TIMERG0.wdtconfig3.val,
           TIMERG0.wdtconfig4.val, TIMERG0.regclk.val);
-#endif
 
     /* route WDT peripheral interrupt source to CPU_INUM_WDT */
     intr_matrix_set(PRO_CPU_NUM, ETS_TG0_WDT_LEVEL_INTR_SOURCE, CPU_INUM_WDT);
     /* set the interrupt handler and activate the interrupt */
-    intr_cntrl_ll_set_int_handler(CPU_INUM_WDT, system_wdt_int_handler, NULL);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_WDT));
+    esp_cpu_intr_set_handler(CPU_INUM_WDT, system_wdt_int_handler, NULL);
+    esp_cpu_intr_enable(BIT(CPU_INUM_WDT));
 }
 
 void system_wdt_stop(void)
 {
-    intr_cntrl_ll_disable_interrupts(BIT(CPU_INUM_WDT));
+    esp_cpu_intr_disable(BIT(CPU_INUM_WDT));
     wdt_hal_write_protect_disable(&mwdt);
     wdt_hal_disable(&mwdt);
     wdt_hal_write_protect_enable(&mwdt);
@@ -391,5 +388,5 @@ void system_wdt_start(void)
     wdt_hal_write_protect_disable(&mwdt);
     wdt_hal_enable(&mwdt);
     wdt_hal_write_protect_enable(&mwdt);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_WDT));
+    esp_cpu_intr_enable(BIT(CPU_INUM_WDT));
 }

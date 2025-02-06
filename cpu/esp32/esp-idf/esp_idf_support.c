@@ -88,7 +88,7 @@ static esp_log_level_entry_t _log_levels[] = {
 };
 
 /*
- * provided by: /path/to/esp-idf/component/log/log.c
+ * provided by: /path/to/esp-idf/components/log/log.c
  */
 void IRAM_ATTR esp_log_write(esp_log_level_t level,
                              const char* tag, const char* format, ...)
@@ -100,7 +100,7 @@ void IRAM_ATTR esp_log_write(esp_log_level_t level,
 }
 
 /*
- * provided by: /path/to/esp-idf/component/log/log.c
+ * provided by: /path/to/esp-idf/components/log/log.c
  */
 void IRAM_ATTR esp_log_writev(esp_log_level_t level,
                               const char *tag,
@@ -134,7 +134,7 @@ void IRAM_ATTR esp_log_writev(esp_log_level_t level,
 }
 
 /*
- * provided by: /path/to/esp-idf/component/log/log.c
+ * provided by: /path/to/esp-idf/components/log/log.c
  */
 void esp_log_level_set(const char* tag, esp_log_level_t level)
 {
@@ -151,4 +151,14 @@ void esp_log_level_set(const char* tag, esp_log_level_t level)
     }
 
     _log_levels[i].level = level;
+}
+
+
+/*
+ * provided by: /path/to/esp-idf/components/newlib/time.c
+ */
+void esp_newlib_time_init(void)
+{
+    extern void esp_time_impl_init(void);
+    esp_time_impl_init();
 }

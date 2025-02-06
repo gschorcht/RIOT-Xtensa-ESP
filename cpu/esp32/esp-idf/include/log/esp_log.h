@@ -26,6 +26,7 @@
 extern "C" {
 #endif
 
+#include "log.h"
 #include_next "esp_log.h"
 
 #if defined(RIOT_VERSION)
@@ -67,6 +68,8 @@ extern "C" {
 #define ESP_LOGI(tag, format, ...) esp_log_write((esp_log_level_t)LOG_INFO   , tag, format "\n", ##__VA_ARGS__)
 #define ESP_LOGD(tag, format, ...) esp_log_write((esp_log_level_t)LOG_DEBUG  , tag, format "\n", ##__VA_ARGS__)
 #define ESP_LOGV(tag, format, ...) esp_log_write((esp_log_level_t)LOG_ALL    , tag, format "\n", ##__VA_ARGS__)
+
+#define ESP_DRAM_LOGV(tag, format, ...) esp_log_write((esp_log_level_t)LOG_ALL, tag, format "\n", ##__VA_ARGS__)
 
 #if MODULE_ESP_LOG_TAGGED
 

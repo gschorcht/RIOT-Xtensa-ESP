@@ -58,18 +58,26 @@ extern "C" {
 #ifndef CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ
 #define CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ       80
 #endif
+
+/**
+ * Default CPU frequency symbol used by the ESP-IDF
+ */
+#define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ         CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ
 /** @} */
 
 /**
  * ESP32 specific RTC clock configuration
  */
 #define CONFIG_ESP32_RTC_CLK_CAL_CYCLES         (8 * 1024)
+#define CONFIG_RTC_CLK_CAL_CYCLES               CONFIG_ESP32_RTC_CLK_CAL_CYCLES
 
 /**
  * ESP32 specific EFUSE configuration
  */
 #define CONFIG_EFUSE_MAX_BLK_LEN                192
 #define CONFIG_EFUSE_CODE_SCHEME_COMPAT_3_4     1
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MIN_FULL     0
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MAX_FULL     99
 
 /**
  * ESP32 specific MAC configuration
@@ -83,7 +91,6 @@ extern "C" {
 /**
  * ESP32 specific system configuration (DO NOT CHANGE)
  */
-#define CONFIG_ESP_TIMER_IMPL_FRC2              1
 #define CONFIG_ESP_CONSOLE_MULTIPLE_UART        1
 
 #define CONFIG_ESP32_DEBUG_OCDAWARE             1
@@ -100,7 +107,8 @@ extern "C" {
 /**
  * ESP32 specific sleep configuration (DO NOT CHANGE)
  */
-#define CONFIG_ESP_SLEEP_RTC_BUS_ISO_WORKAROUND 1
+#define CONFIG_ESP_SLEEP_RTC_BUS_ISO_WORKAROUND         1
+#define CONFIG_ESP_SLEEP_WAIT_FLASH_READY_EXTRA_DELAY   2000
 
 /**
  * ESP32 specific ADC calibration

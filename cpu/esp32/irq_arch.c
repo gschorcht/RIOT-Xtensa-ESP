@@ -21,12 +21,14 @@
 #include "irq_arch.h"
 
 #include "esp_attr.h"
+#include "esp_bit_defs.h"
+#include "esp_cpu.h"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
-#include "hal/interrupt_controller_types.h"
-#include "hal/interrupt_controller_ll.h"
 #include "rom/ets_sys.h"
+#include "soc/interrupts.h"
 #include "soc/periph_defs.h"
+#include "soc/soc.h"
 #include "esp_intr_alloc.h"
 
 #define ENABLE_DEBUG 0
@@ -108,19 +110,19 @@ void esp_irq_init(void)
 #ifdef SOC_CPU_HAS_FLEXIBLE_INTC
     /* to avoid to do it in every component, we initialize levels here once */
     for (unsigned i = 0; i < IRQ_DATA_TABLE_SIZE; i++) {
-        intr_cntrl_ll_set_int_level(_irq_data_table[i].intr, _irq_data_table[i].level);
+        esp_cpu_intr_set_priority(_irq_data_table[i].intr, _irq_data_table[i].level);
     }
 #endif
 }
 
 void esp_intr_enable_source(int inum)
 {
-    intr_cntrl_ll_enable_interrupts(BIT(inum));
+    esp_cpu_intr_enable(BIT(inum));
 }
 
 void esp_intr_disable_source(int inum)
 {
-    intr_cntrl_ll_disable_interrupts(BIT(inum));
+    esp_cpu_intr_disable(BIT(inum));
 }
 
 esp_err_t esp_intr_enable(intr_handle_t handle)
@@ -165,16 +167,16 @@ esp_err_t esp_intr_alloc(int source, int flags, intr_handler_t handler,
     intr_matrix_set(PRO_CPU_NUM, _irq_data_table[i].src, _irq_data_table[i].intr);
 
     /* set the interrupt handler */
-    intr_cntrl_ll_set_int_handler(_irq_data_table[i].intr, handler, arg);
+    esp_cpu_intr_set_handler(_irq_data_table[i].intr, handler, arg);
 
 #ifdef SOC_CPU_HAS_FLEXIBLE_INTC
     /* set interrupt level given by flags */
-    intr_cntrl_ll_set_int_level(_irq_data_table[i].intr, esp_intr_flags_to_level(flags));
+    esp_cpu_intr_set_priority(_irq_data_table[i].intr, esp_intr_flags_to_level(flags));
 #endif
 
     /* enable the interrupt if ESP_INTR_FLAG_INTRDISABLED is not set */
     if ((flags & ESP_INTR_FLAG_INTRDISABLED) == 0) {
-        intr_cntrl_ll_enable_interrupts(BIT(_irq_data_table[i].intr));
+        esp_cpu_intr_enable(BIT(_irq_data_table[i].intr));
     }
 
     if (ret_handle) {
@@ -204,3 +206,20 @@ int esp_intr_get_cpu(intr_handle_t handle)
 {
     return PRO_CPU_NUM;
 }
+
+static volatile uint32_t state;
+
+void IRAM_ATTR esp_intr_noniram_disable(void)
+{
+    if (irq_interrupt_nesting == 0) {
+        state = irq_disable();
+    }
+}
+
+void IRAM_ATTR esp_intr_noniram_enable(void)
+{
+    if (irq_interrupt_nesting == 1) {
+        irq_restore(state);
+    }
+}
+

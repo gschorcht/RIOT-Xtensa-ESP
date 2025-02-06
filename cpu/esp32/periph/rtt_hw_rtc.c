@@ -32,9 +32,8 @@
 
 /* ESP-IDF headers */
 #include "esp_attr.h"
+#include "esp_cpu.h"
 #include "esp_sleep.h"
-#include "hal/interrupt_controller_types.h"
-#include "hal/interrupt_controller_ll.h"
 #include "rom/ets_sys.h"
 #include "soc/periph_defs.h"
 #include "soc/rtc_cntl_struct.h"
@@ -83,15 +82,15 @@ static void _rtc_poweron(void)
     intr_matrix_set(PRO_CPU_NUM, ETS_RTC_CORE_INTR_SOURCE, CPU_INUM_RTT);
 
     /* set interrupt handler and enable the CPU interrupt */
-    intr_cntrl_ll_set_int_handler(CPU_INUM_RTT, _rtc_isr, NULL);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_RTT));
+    esp_cpu_intr_set_handler(CPU_INUM_WDT, _rtc_isr, NULL);
+    esp_cpu_intr_enable(BIT(CPU_INUM_WDT));
 }
 
 static void _rtc_poweroff(void)
 {
     /* reset interrupt handler and disable the CPU interrupt */
-    intr_cntrl_ll_disable_interrupts(BIT(CPU_INUM_RTT));
-    intr_cntrl_ll_set_int_handler(CPU_INUM_RTT, NULL, NULL);
+    esp_cpu_intr_disable(BIT(CPU_INUM_WDT));
+    esp_cpu_intr_set_handler(CPU_INUM_RTT, NULL, NULL);
 }
 
 uint64_t _rtc_get_counter(void)

@@ -30,6 +30,10 @@ QueueHandle_t xQueueGenericCreate (const UBaseType_t uxQueueLength,
 QueueHandle_t xQueueCreateCountingSemaphore (const UBaseType_t uxMaxCount,
                                              const UBaseType_t uxInitialCount);
 
+QueueHandle_t xQueueCreateWithCaps(const UBaseType_t uxQueueLength,
+                                   const UBaseType_t uxItemSize,
+                                   const UBaseType_t uxMemoryCaps);
+
 void vQueueDelete (QueueHandle_t xQueue);
 
 BaseType_t xQueueReset (QueueHandle_t xQueue);

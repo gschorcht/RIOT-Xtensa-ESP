@@ -43,10 +43,9 @@
 #include "ztimer.h"
 
 #include "esp_attr.h"
+#include "esp_cpu.h"
 #include "driver/i2c.h"
 #include "hal/i2c_hal.h"
-#include "hal/interrupt_controller_types.h"
-#include "hal/interrupt_controller_ll.h"
 #include "rom/ets_sys.h"
 #include "soc/i2c_reg.h"
 
@@ -184,9 +183,9 @@ void i2c_init(i2c_t dev)
     uint32_t apb_clk = rtc_clk_apb_freq_get();
 
     if (apb_clk < MHZ(80)) {
-        i2c_clk_cal_t clk_cfg;
-        i2c_ll_cal_bus_clk(apb_clk, cfg.master.clk_speed, &clk_cfg);
-        i2c_ll_set_bus_timing(_i2c_hw[dev].dev, &clk_cfg);
+        i2c_hal_clk_config_t clk_cfg;
+        i2c_ll_master_cal_bus_clk(apb_clk, cfg.master.clk_speed, &clk_cfg);
+        i2c_ll_master_set_bus_timing(_i2c_hw[dev].dev, &clk_cfg);
     }
 #endif
 
@@ -198,8 +197,8 @@ void i2c_init(i2c_t dev)
     intr_matrix_set(PRO_CPU_NUM, i2c_periph_signal[dev].irq, CPU_INUM_I2C);
 
     /* set interrupt handler and enable the CPU interrupt */
-    intr_cntrl_ll_set_int_handler(CPU_INUM_I2C, _i2c_intr_handler, NULL);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_I2C));
+    esp_cpu_intr_set_handler(CPU_INUM_I2C, _i2c_intr_handler, NULL);
+    esp_cpu_intr_enable(BIT(CPU_INUM_I2C));
 
     i2c_release(dev);
 }
@@ -235,8 +234,8 @@ int i2c_read_bytes(i2c_t dev, uint16_t addr, void *data, size_t len, uint8_t fla
     _i2c_bus[dev].cmd = 0;
 
     /* reset TX/RX FIFO queue */
-    i2c_hal_txfifo_rst(&_i2c_hw[dev]);
-    i2c_hal_rxfifo_rst(&_i2c_hw[dev]);
+    i2c_ll_txfifo_rst(_i2c_hw[dev].dev);
+    i2c_ll_rxfifo_rst(_i2c_hw[dev].dev);
 
     /*  if I2C_NOSTART is not set, START condition and ADDR is used */
     if (!(flags & I2C_NOSTART)) {
@@ -276,10 +275,10 @@ int i2c_read_bytes(i2c_t dev, uint16_t addr, void *data, size_t len, uint8_t fla
         }
 
         /* if transfer was successful, fetch the data from I2C RAM */
-        i2c_hal_read_rxfifo(&_i2c_hw[dev], data + off, len);
+        i2c_ll_read_rxfifo(_i2c_hw[dev].dev, data + off, len);
 
         /* reset RX FIFO queue */
-        i2c_hal_rxfifo_rst(&_i2c_hw[dev]);
+        i2c_ll_rxfifo_rst(_i2c_hw[dev].dev);
 
         len -= SOC_I2C_FIFO_LEN;
         off += SOC_I2C_FIFO_LEN;
@@ -307,7 +306,7 @@ int i2c_read_bytes(i2c_t dev, uint16_t addr, void *data, size_t len, uint8_t fla
     }
 
     /* fetch the data from RX FIFO */
-    i2c_hal_read_rxfifo(&_i2c_hw[dev], data + off, len);
+    i2c_ll_read_rxfifo(_i2c_hw[dev].dev, data + off, len);
 
     /* return 0 on success */
     return 0;
@@ -328,7 +327,7 @@ int i2c_write_bytes(i2c_t dev, uint16_t addr, const void *data, size_t len, uint
     _i2c_bus[dev].cmd = 0;
 
     /* reset TX FIFO queue */
-    i2c_hal_txfifo_rst(&_i2c_hw[dev]);
+    i2c_ll_txfifo_rst(_i2c_hw[dev].dev);
 
     /*  if I2C_NOSTART is not set, START condition and ADDR is used */
     if (!(flags & I2C_NOSTART)) {
@@ -358,7 +357,7 @@ int i2c_write_bytes(i2c_t dev, uint16_t addr, const void *data, size_t len, uint
     uint32_t tx_fifo_free;
 
     /* get available TX FIFO space */
-    i2c_hal_get_txfifo_cnt(&_i2c_hw[dev], &tx_fifo_free);
+    i2c_ll_get_txfifo_len(_i2c_hw[dev].dev, &tx_fifo_free);
 
     /* if len > SOC_I2C_FIFO_LEN write SOC_I2C_FIFO_LEN bytes at a time */
     while (len > tx_fifo_free) {
@@ -377,10 +376,10 @@ int i2c_write_bytes(i2c_t dev, uint16_t addr, const void *data, size_t len, uint
         off += tx_fifo_free;
 
         /* reset TX FIFO queue */
-        i2c_hal_txfifo_rst(&_i2c_hw[dev]);
+        i2c_ll_txfifo_rst(_i2c_hw[dev].dev);
 
         /* update available TX FIFO space */
-        i2c_hal_get_txfifo_cnt(&_i2c_hw[dev], &tx_fifo_free);
+        i2c_ll_get_txfifo_len(_i2c_hw[dev].dev, &tx_fifo_free);
     }
 
     /* write remaining data bytes command */
@@ -439,7 +438,7 @@ static int _i2c_status_to_errno(i2c_t dev)
              */
             uint32_t cnt;
 
-            i2c_hal_get_txfifo_cnt(&_i2c_hw[dev], &cnt);
+            i2c_ll_get_txfifo_len(_i2c_hw[dev].dev, &cnt);
             return ((SOC_I2C_FIFO_LEN - cnt) >= _i2c_bus[dev].len) ? -ENXIO : -EIO;
         }
         else {
@@ -467,8 +466,8 @@ static void _i2c_start_cmd(i2c_t dev)
     DEBUG ("%s\n", __func__);
 
     /* place START condition command in command queue */
-    i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_RESTART };
-    i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+    i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_RESTART };
+    i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
     /* increment the command counter */
     _i2c_bus[dev].cmd++;
@@ -479,8 +478,8 @@ static void _i2c_stop_cmd(i2c_t dev)
     DEBUG ("%s\n", __func__);
 
     /* place STOP condition command in command queue */
-    i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_STOP };
-    i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+    i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_STOP };
+    i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
     /* increment the command counter */
     _i2c_bus[dev].cmd++;
@@ -491,8 +490,8 @@ static void _i2c_end_cmd(i2c_t dev)
     DEBUG ("%s\n", __func__);
 
     /* place END command for continues data transmission in command queue */
-    i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_END };
-    i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+    i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_END };
+    i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
     /* increment the command counter */
     _i2c_bus[dev].cmd++;
@@ -509,15 +508,15 @@ static void _i2c_write_cmd(i2c_t dev, const uint8_t* data, uint8_t len)
     }
 
     /* store the data in TX FIFO */
-    i2c_hal_write_txfifo(&_i2c_hw[dev], (uint8_t *)data, len);
+    i2c_ll_write_txfifo(_i2c_hw[dev].dev, (uint8_t *)data, len);
 
     /* place WRITE command for multiple bytes in command queue */
-    i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_WRITE,
-                         .byte_num = len,
-                         .ack_en = 1,
-                         .ack_exp = 0,
-                         .ack_val = 0 };
-    i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+    i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_WRITE,
+                            .byte_num = len,
+                            .ack_en = 1,
+                            .ack_exp = 0,
+                            .ack_val = 0 };
+    i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
     /* increment the command counter */
     _i2c_bus[dev].cmd++;
@@ -536,24 +535,24 @@ static void _i2c_read_cmd(i2c_t dev, uint8_t len, bool last)
     if (len > 1)
     {
         /* place READ command for len-1 bytes with positive ack in command queue*/
-        i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_READ,
-                             .byte_num = len-1,
-                             .ack_en = 0,
-                             .ack_exp = 0,
-                             .ack_val = 0 };
-        i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+        i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_READ,
+                                .byte_num = len-1,
+                                .ack_en = 0,
+                                .ack_exp = 0,
+                                .ack_val = 0 };
+        i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
         /* increment the command counter */
         _i2c_bus[dev].cmd++;
     }
 
     /* place READ command for last byte with negative ack in last segment in command queue*/
-    i2c_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_READ,
-                         .byte_num = 1,
-                         .ack_en = 0,
-                         .ack_exp = 0,
-                         .ack_val = last ? 1 : 0 };
-    i2c_hal_write_cmd_reg(&_i2c_hw[dev], cmd, _i2c_bus[dev].cmd);
+    i2c_ll_hw_cmd_t cmd = { .op_code = I2C_LL_CMD_READ,
+                            .byte_num = 1,
+                            .ack_en = 0,
+                            .ack_exp = 0,
+                            .ack_val = last ? 1 : 0 };
+    i2c_ll_master_write_cmd_reg(_i2c_hw[dev].dev, cmd, _i2c_bus[dev].cmd);
 
     /* increment the command counter */
     _i2c_bus[dev].cmd++;
@@ -586,8 +585,8 @@ static void _i2c_transfer(i2c_t dev)
     DEBUG("%s cmd=%d\n", __func__, _i2c_bus[dev].cmd);
 
     /* disable and enable all transmission interrupts and clear current status */
-    i2c_hal_clr_intsts_mask(&_i2c_hw[dev], I2C_LL_MASTER_INT);
-    i2c_hal_enable_intr_mask(&_i2c_hw[dev], I2C_LL_MASTER_INT);
+    i2c_ll_clear_intr_mask(_i2c_hw[dev].dev, I2C_LL_MASTER_INT);
+    i2c_ll_enable_intr_mask(_i2c_hw[dev].dev, I2C_LL_MASTER_INT);
 
     /* set a timer for the case the I2C hardware gets stuck */
 #if defined(MODULE_ZTIMER_MSEC)
@@ -600,8 +599,8 @@ static void _i2c_transfer(i2c_t dev)
     /* start the execution of commands in command pipeline */
     _i2c_bus[dev].status = 0;
 
-    i2c_hal_update_config(&_i2c_hw[dev]);
-    i2c_hal_trans_start(&_i2c_hw[dev]);
+    i2c_ll_update(_i2c_hw[dev].dev);
+    i2c_ll_start_trans(_i2c_hw[dev].dev);
 
     /* wait for transfer results and remove timeout timer*/
     mutex_lock(&_i2c_bus[dev].cmd_lock);
@@ -627,13 +626,14 @@ static void IRAM_ATTR _i2c_intr_handler(void *arg)
     /* all I2C peripheral interrupt sources are routed to the same interrupt,
        so we have to use the status register to distinguish interruptees */
     for (unsigned dev = 0; dev < I2C_NUMOF; dev++) {
-        uint32_t mask = i2c_ll_get_intsts_mask(_i2c_hw[dev].dev);
+        uint32_t mask;
+        i2c_ll_get_intr_mask(_i2c_hw[dev].dev, &mask);
         /* test for transfer related interrupts */
         if (mask) {
             _i2c_bus[dev].status = mask;
             /* disable all interrupts and clear pending interrupts */
-            i2c_hal_clr_intsts_mask(&_i2c_hw[dev], I2C_LL_MASTER_INT);
-            i2c_hal_disable_intr_mask(&_i2c_hw[dev], I2C_LL_MASTER_INT);
+            i2c_ll_clear_intr_mask(_i2c_hw[dev].dev, I2C_LL_MASTER_INT);
+            i2c_ll_enable_intr_mask(_i2c_hw[dev].dev, I2C_LL_MASTER_INT);
 
             /* wake up the thread that is waiting for the results */
             mutex_unlock(&_i2c_bus[dev].cmd_lock);

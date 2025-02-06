@@ -26,17 +26,17 @@
 #include "esp_idf_api/uart.h"
 
 static uart_hal_context_t _uart_hal_ctx[] = {
-#if UART_NUM_MAX >= 1
+#if SOC_UART_NUM >= 1
     {
         .dev = UART_LL_GET_HW(0),
     },
 #endif
-#if UART_NUM_MAX >= 2
+#if SOC_UART_NUM >= 2
     {
         .dev = UART_LL_GET_HW(1),
     },
 #endif
-#if UART_NUM_MAX >= 3
+#if SOC_UART_NUM >= 3
     {
         .dev = UART_LL_GET_HW(2),
     },

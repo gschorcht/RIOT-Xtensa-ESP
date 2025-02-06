@@ -126,13 +126,17 @@ INCLUDES += -I$(RIOTCPU)/$(CPU)/vendor/include
 
 INCLUDES += -I$(ESP32_SDK_DIR)/components
 INCLUDES += -I$(ESP32_SDK_DIR)/components/bootloader_support/include
-INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/deprecated
+INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_adc/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_common/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_driver_gpio/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_hw_support/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_hw_support/include/soc
+INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_hw_support/port/$(CPU_FAM)/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_rom/include
-INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_rom/include/$(CPU_FAM)
+INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/include/$(CPU_FAM)
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_system/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_system/port/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_timer/include
@@ -144,7 +148,9 @@ INCLUDES += -I$(ESP32_SDK_DIR)/components/log/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/newlib/platform_include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/soc/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/soc/$(CPU_FAM)/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/soc/$(CPU_FAM)/register
 INCLUDES += -I$(ESP32_SDK_DIR)/components/spi_flash/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/spi_flash/include/spi_flash
 
 ifneq (,$(filter riscv32%,$(TARGET_ARCH)))
   INCLUDES += -I$(ESP32_SDK_DIR)/components/riscv/include
@@ -164,8 +170,13 @@ ifneq (,$(filter esp_ble_nimble,$(USEMODULE)))
   INCLUDES += $(NIMIBASE)/nimble/transport/common/hci_h4/include
 endif
 
+ifneq (,$(filter esp_i2c_hw,$(USEMODULE)))
+  INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/i2c/include
+endif
+
 ifneq (,$(filter esp_spi_ram,$(USEMODULE)))
-  INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_hw_support/include/soc/$(CPU_FAM)
+  #INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_hw_support/include/soc/$(CPU_FAM)
+  INCLUDES += -I$(ESP32_SDK_DIR)/components/esp_psram/include
 endif
 
 ifneq (,$(filter esp_idf_lcd,$(USEMODULE)))
@@ -204,7 +215,7 @@ endif
 
 CFLAGS += -DCPU_FAM_$(call uppercase_and_underscore,$(CPU_FAM))
 
-# we use ESP32 only in single core mode
+# we use ESP32x SoC only in single core mode
 CFLAGS += -DCONFIG_ESP_SYSTEM_SINGLE_CORE_MODE
 CFLAGS += -DCONFIG_FREERTOS_UNICORE
 
@@ -246,7 +257,9 @@ CFLAGS += -D_CONST=const
 
 # TODO no relaxation yet
 ifneq (,$(filter riscv%,$(TARGET_ARCH)))
+  CFLAGS += -DCONFIG_IDF_TARGET_ARCH_RISCV
   CFLAGS += -mno-relax -march=rv32imc_zicsr_zifencei -mabi=ilp32 -DRISCV_NO_RELAX
+  LDGENFLAGS += -DCONFIG_IDF_TARGET_ARCH_RISCV
   LINKFLAGS += -mno-relax -march=rv32imc_zicsr_zifencei -mabi=ilp32
   GCC_NEW_RISCV_ISA ?= $(shell echo "typedef int dont_be_pedantic;" | \
                                $(TARGET_ARCH)-gcc -march=rv32imac -mabi=ilp32 \
@@ -258,6 +271,8 @@ ifneq (,$(filter riscv%,$(TARGET_ARCH)))
 endif
 
 ifneq (,$(filter xtensa%,$(TARGET_ARCH)))
+  CFLAGS += -DCONFIG_IDF_TARGET_ARCH_XTENSA
+  LDGENFLAGS += -DCONFIG_IDF_TARGET_ARCH_XTENSA
   LINKFLAGS += -L$(ESP32_SDK_DIR)/components/xtensa/$(CPU_FAM)
   ARCHIVES += -lxt_hal
 endif
@@ -273,12 +288,13 @@ LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.
 LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.libgcc.ld
 
 ifeq (esp32s2,$(CPU_FAM))
-  LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.spiflash.ld
+  LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.spiflash_legacy.ld
+else ifeq (esp32s3,$(CPU_FAM))
+  LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.newlib.ld
 else ifeq (esp32c3,$(CPU_FAM))
   LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.newlib.ld
   LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.eco3.ld
-else ifeq (esp32s3,$(CPU_FAM))
-  LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.newlib.ld
+  LINKFLAGS += -T$(ESP32_SDK_DIR)/components/riscv/ld/rom.api.ld
 endif
 
 LINKFLAGS += -nostdlib -lgcc -Wl,-gc-sections
@@ -343,12 +359,13 @@ endif
 
 LD_SCRIPTS += $(BINDIR)/memory.ld $(BINDIR)/sections.ld
 
-$(BINDIR)/memory.ld: $(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/memory.ld.in \
+$(BINDIR)/memory.ld: $(RIOTCPU)/$(CPU)/vendor/ld/$(CPU_FAM)/memory.ld.in \
                      $(BINDIR)/riotbuild/riotbuild.h pkg-prepare
 	$(Q)$(CC) -DLD_FILE_GEN $(INCLUDES) -include '$(BINDIR)/riotbuild/riotbuild.h' \
-				-I$(RIOTCPU)/$(CPU)/ld -P -x c -E $< -o $@
-$(BINDIR)/sections.ld: $(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/sections.ld.in \
+				$(LDGENFLAGS) -I$(RIOTCPU)/$(CPU)/vendor/ld -P -x c -E $< -o $@
+$(BINDIR)/sections.ld: $(RIOTCPU)/$(CPU)/vendor/ld/$(CPU_FAM)/sections.ld.in \
                        $(BINDIR)/riotbuild/riotbuild.h pkg-prepare
-	$(Q)$(CC) -DLD_FILE_GEN -include '$(BINDIR)/riotbuild/riotbuild.h' -C -P -x c -E $< -o $@
+	$(Q)$(CC) -DLD_FILE_GEN $(INCLUDES) -include '$(BINDIR)/riotbuild/riotbuild.h' \
+				$(LDGENFLAGS) -I$(RIOTCPU)/$(CPU)/vendor/ld -C -P -x c -E $< -o $@
 
 $(BOOTLOADER_BIN):

@@ -98,8 +98,8 @@ static void _init(void)
     intr_matrix_set(PRO_CPU_NUM, ETS_USB_SERIAL_JTAG_INTR_SOURCE, CPU_INUM_SERIAL_JTAG);
 
     /* enable the CPU interrupt */
-    intr_cntrl_ll_set_int_handler(CPU_INUM_SERIAL_JTAG, _serial_intr_handler, NULL);
-    intr_cntrl_ll_enable_interrupts(BIT(CPU_INUM_SERIAL_JTAG));
+    esp_cpu_intr_set_handler(CPU_INUM_SERIAL_JTAG, _serial_intr_handler, NULL);
+    esp_cpu_intr_enable(BIT(CPU_INUM_SERIAL_JTAG));
 
 #ifdef SOC_CPU_HAS_FLEXIBLE_INTC
     /* set interrupt level */

@@ -106,6 +106,14 @@ QueueHandle_t xQueueCreateCountingSemaphore (const UBaseType_t uxMaxCount,
     return queue;
 }
 
+QueueHandle_t xQueueCreateWithCaps(const UBaseType_t uxQueueLength,
+                                   const UBaseType_t uxItemSize,
+                                   const UBaseType_t uxMemoryCaps)
+{
+    (void)uxMemoryCaps;
+    return xQueueGenericCreate(uxQueueLength, uxItemSize, queueQUEUE_TYPE_BASE);
+}
+
 void vQueueDelete( QueueHandle_t xQueue )
 {
     DEBUG("%s pid=%d queue=%p\n", __func__, thread_getpid(), xQueue);

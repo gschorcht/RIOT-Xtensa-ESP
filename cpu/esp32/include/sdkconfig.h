@@ -23,15 +23,6 @@
 #define SDKCONFIG_H
 
 /*
- * Some files in ESP-IDF use functions from `stdlib.h` without including the
- * header. To avoid having to patch all these files, `stdlib.h` is included
- * in this header file, which in turn is included by every ESP-IDF file.
- */
-#if !defined(__ASSEMBLER__) && !defined(LD_FILE_GEN)
-#include <stdlib.h>
-#endif
-
-/*
  * The SoC capability definitions are often included indirectly in the
  * ESP-IDF files, although all ESP-IDF files require them. Since not all
  * ESP-IDF header files are included in RIOT, the SoC capability definitions
@@ -39,7 +30,7 @@
  * capabilities are included in this file and are thus available to all
  * ESP-IDF files. This avoids to update vendor code.
  */
-#include "soc/soc_caps.h"
+/* #include "soc/soc_caps.h" */
 
 /**
  * @brief   SDK version number
@@ -65,6 +56,8 @@
 #endif
 #define CONFIG_ESP_CONSOLE_UART_BAUDRATE    STDIO_UART_BAUDRATE
 
+#define CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM CONFIG_ESP_CONSOLE_UART_NUM
+
 /**
  * Log output configuration (DO NOT CHANGE)
  */
@@ -89,11 +82,16 @@
 #define CONFIG_ESP_TIMER_TASK_STACK_SIZE        3584
 #define CONFIG_ESP_TIMER_INTERRUPT_LEVEL        1
 #define CONFIG_TIMER_TASK_STACK_SIZE            CONFIG_ESP_TIMER_TASK_STACK_SIZE
+#define CONFIG_ESP_TIMER_TASK_AFFINITY          0
+#define CONFIG_ESP_TIMER_ISR_AFFINITY_CPU0      1
 
 #define CONFIG_APP_BUILD_TYPE_APP_2NDBOOT       1
 #define CONFIG_APP_BUILD_GENERATE_BINARIES      1
 #define CONFIG_APP_BUILD_BOOTLOADER             1
 #define CONFIG_APP_BUILD_USE_FLASH_SECTIONS     1
+#define CONFIG_APP_COMPILE_TIME_DATE            1
+#define CONFIG_APP_EXCLUDE_PROJECT_VER_VAR      1
+#define CONFIG_APP_RETRIEVE_LEN_ELF_SHA         9
 
 #define CONFIG_PARTITION_TABLE_CUSTOM_FILENAME  "partitions.csv"
 #define CONFIG_PARTITION_TABLE_FILENAME         "partitions_singleapp.csv"
@@ -118,9 +116,11 @@
 #define CONFIG_SPIRAM_TYPE_AUTO                 1
 #define CONFIG_SPIRAM_SIZE                      -1
 #define CONFIG_SPIRAM_SPEED_40M                 1
+#define CONFIG_SPIRAM_SPEED                     40
 #define CONFIG_SPIRAM                           1
 #define CONFIG_SPIRAM_BOOT_INIT                 1
-#define CONFIG_SPIRAM_USE_MALLOC                0   /* using malloc requires QStaticQueue */
+#define CONFIG_SPIRAM_USE_MALLOC                1   /* using malloc requires QStaticQueue */
+#define CONFIG_SPIRAM_USE_CAPS_ALLOC            0   /* using cap instead of malloc */
 #define CONFIG_SPIRAM_MEMTEST                   1
 #define CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL     16384
 #define CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL   32768
@@ -130,7 +130,6 @@
  * SPI Flash driver configuration (DO NOT CHANGE)
  */
 #define CONFIG_SPI_FLASH_ROM_DRIVER_PATCH           1
-#define CONFIG_SPI_FLASH_USE_LEGACY_IMPL            1
 #define CONFIG_SPI_FLASH_DANGEROUS_WRITE_ABORTS     1
 #define CONFIG_SPI_FLASH_YIELD_DURING_ERASE         1
 #define CONFIG_SPI_FLASH_ERASE_YIELD_DURATION_MS    20
@@ -140,9 +139,11 @@
 #define CONFIG_SPI_FLASH_SUPPORT_MXIC_CHIP          1
 #define CONFIG_SPI_FLASH_SUPPORT_GD_CHIP            1
 #define CONFIG_SPI_FLASH_SUPPORT_WINBOND_CHIP       1
+/*
 #define CONFIG_SPI_FLASH_SUPPORT_BOYA_CHIP          1
 #define CONFIG_SPI_FLASH_SUPPORT_TH_CHIP            1
 #define CONFIG_SPI_FLASH_SUPPORT_MXIC_OPI_CHIP      1
+*/
 
 /**
  * Ethernet driver configuration (DO NOT CHANGE)
@@ -260,6 +261,23 @@
 #else
 #error "ESP32x family implementation missing"
 #endif
+
+#ifndef CONFIG_MMU_PAGE_SIZE
+#define CONFIG_MMU_PAGE_SIZE_64KB   1
+#define CONFIG_MMU_PAGE_SIZE        0x10000
+#endif
+
+#ifndef CONFIG_FREERTOS_NUMBER_OF_CORES
+#define CONFIG_FREERTOS_NUMBER_OF_CORES 1
+#endif
+
+#define CONFIG_SOC_RTC_MEM_SUPPORTED    1
+
+#define CONFIG_ESP_DEBUG_OCDAWARE       1
+
+#define CONFIG_ADC_SUPPRESS_DEPRECATE_WARN  1
+
+#define PROJECT_NAME    RIOT_APPLICATION
 
 #ifdef __cplusplus
 extern "C" {

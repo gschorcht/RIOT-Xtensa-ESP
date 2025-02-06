@@ -58,17 +58,25 @@ extern "C" {
 #ifndef CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
 #define CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ     80
 #endif
+
+/**
+ * Default CPU frequency symbol used by the ESP-IDF
+ */
+#define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ         CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
 /** @} */
 
 /**
  * ESP32-S2 specific RTC clock configuration
  */
 #define CONFIG_ESP32S2_RTC_CLK_CAL_CYCLES       (8 * 1024)
+#define CONFIG_RTC_CLK_CAL_CYCLES               CONFIG_ESP32S2_RTC_CLK_CAL_CYCLES
 
 /**
  * ESP32-S2 specific EFUSE configuration
  */
 #define CONFIG_EFUSE_MAX_BLK_LEN                256
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MIN_FULL     0
+#define CONFIG_ESP_EFUSE_BLOCK_REV_MAX_FULL     99
 
 /**
  * ESP32-S2 specific MAC configuration
@@ -100,7 +108,8 @@ extern "C" {
 /**
  * ESP32-S2 specific sleep configuration (DO NOT CHANGE)
  */
-#define CONFIG_ESP_SLEEP_RTC_BUS_ISO_WORKAROUND 1
+#define CONFIG_ESP_SLEEP_RTC_BUS_ISO_WORKAROUND         1
+#define CONFIG_ESP_SLEEP_WAIT_FLASH_READY_EXTRA_DELAY   0
 
 /**
  * ESP32-S2 specific USB configuration
@@ -127,8 +136,10 @@ extern "C" {
  * ESP32-S2 specific Cache config
  */
 #define CONFIG_ESP32S2_INSTRUCTION_CACHE_8KB        1
+#define CONFIG_ESP32S2_INSTRUCTION_CACHE_SIZE       0x2000
 #define CONFIG_ESP32S2_INSTRUCTION_CACHE_LINE_32B   1
 #define CONFIG_ESP32S2_DATA_CACHE_8KB               1
+#define CONFIG_ESP32S2_DATA_CACHE_SIZE              0x2000
 #define CONFIG_ESP32S2_DATA_CACHE_LINE_32B          1
 
 /**

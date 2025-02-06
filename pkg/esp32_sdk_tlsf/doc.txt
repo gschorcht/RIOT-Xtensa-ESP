@@ -1,0 +1,6 @@
+/**
+ * @defgroup pkg_esp32_sdk_tls	ESP32x SDK Two-Level Segregated Fit memory allocator
+ * @ingroup  pkg
+ * @brief    TLSF is a general purpose dynamic memory allocator specifically
+ *           designed to meet real-time requirements:
+ */

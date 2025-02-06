@@ -28,8 +28,9 @@
 #include "periph/pwm.h"
 #include "periph/gpio.h"
 
-#include "driver/periph_ctrl.h"
+#include "esp_cpu.h"
 #include "esp_common.h"
+#include "esp_private/periph_ctrl.h"
 #include "esp_rom_gpio.h"
 #include "hal/ledc_hal.h"
 #include "soc/ledc_struct.h"

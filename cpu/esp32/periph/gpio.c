@@ -46,7 +46,7 @@
 
 #include "esp_idf_api/gpio.h"
 
-#include "adc_arch.h"
+//#include "adc_arch.h"
 #include "bitfield.h"
 #include "esp_common.h"
 #include "esp_sleep.h"

@@ -1,29 +1,41 @@
 MODULE = esp_idf_adc
 
 # source files to be compiled for this module
-ESP32_SDK_SRC = \
-  components/driver/adc.c \
-  components/driver/adc_common.c \
-  components/hal/adc_hal.c \
-  components/soc/$(CPU_FAM)/adc_periph.c \
+#ESP32_SDK_SRC = \
+#  components/driver/adc.c \
+#  components/driver/adc_common.c \
+#  components/hal/adc_hal.c \
+#  components/soc/$(CPU_FAM)/adc_periph.c \
   #
 
-ifneq (,$(filter esp32c3 esp32s2,$(CPU_FAM)))
-  ESP32_SDK_SRC += components/driver/$(CPU_FAM)/adc2_init_cal.c
-  INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/include/driver
-endif
+ESP32_SDK_SRC += components/driver/deprecated/adc_legacy.c
+ESP32_SDK_SRC += components/esp_hw_support/adc_share_hw_ctrl.c
+ESP32_SDK_SRC += components/hal/adc_hal_common.c
+ESP32_SDK_SRC += components/hal/rtc_io_hal.c
+ESP32_SDK_SRC += components/soc/$(CPU_FAM)/adc_periph.c
 
-ifneq (,$(filter esp32c3 esp32h2 esp32s3,$(CPU_FAM)))
+ifneq (esp32,$(CPU_FAM))
   ESP32_SDK_SRC += components/efuse/$(CPU_FAM)/esp_efuse_rtc_calib.c
 endif
 
-ifneq (,$(filter esp32s2,$(CPU_FAM)))
+ifneq (,$(filter esp32c3 esp32s2,$(CPU_FAM)))
+#  ESP32_SDK_SRC += components/driver/$(CPU_FAM)/adc2_init_cal.c
+#  INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/include/driver
+endif
+
+ifneq (,$(filter esp32c3 esp32h2 esp32s3,$(CPU_FAM)))
+  # ESP32_SDK_SRC += components/efuse/$(CPU_FAM)/esp_efuse_rtc_calib.c
+endif
+
+ifeq (esp32s2,$(CPU_FAM))
   ESP32_SDK_SRC += components/efuse/esp32s2/esp_efuse_rtc_table.c
 endif
 
 include $(RIOTBASE)/Makefile.base
 
 ESP32_SDK_BIN = $(BINDIR)/$(MODULE)
+
+INCLUDES += -I$(ESP32_SDK_DIR)/components/driver/deprecated
 
 include ../esp_idf.mk
 include ../esp_idf_cflags.mk
