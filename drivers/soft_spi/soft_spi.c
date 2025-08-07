@@ -101,7 +101,7 @@ int soft_spi_init_cs(soft_spi_t bus, soft_spi_cs_t cs)
     return SOFT_SPI_OK;
 }
 
-#if !NDEBUG
+MAYBE_UNUSED
 static inline int soft_spi_mode_is_valid(soft_spi_mode_t mode)
 {
     if ((mode != SOFT_SPI_MODE_0) && (mode != SOFT_SPI_MODE_1) &&
@@ -110,7 +110,6 @@ static inline int soft_spi_mode_is_valid(soft_spi_mode_t mode)
     }
     return 1;
 }
-#endif
 
 void soft_spi_acquire(soft_spi_t bus, soft_spi_cs_t cs, soft_spi_mode_t mode, soft_spi_clk_t clk)
 {
