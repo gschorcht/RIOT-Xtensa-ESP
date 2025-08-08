@@ -1,4 +1,4 @@
- /*
+/*
  * Copyright (C) 2022 HAW Hamburg
  *
  * This file is subject to the terms and conditions of the GNU Lesser
