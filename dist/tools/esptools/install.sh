@@ -11,7 +11,7 @@ ESP32_OPENOCD_VERSION_TGZ="0.12.0-esp32-20251215"
 ESP32_QEMU_VERSION="esp-develop-9.2.2-20250817"
 ESP32_QEMU_VERSION_DOWNLOAD="esp_develop_9.2.2_20250817"
 
-GDB_VERSION="14.2_20240403"
+GDB_VERSION="16.3_20250913"
 
 # set the tool path to the default if not already set
 if [ -z "${IDF_TOOLS_PATH}" ]; then
