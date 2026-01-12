@@ -7,7 +7,7 @@ if [ "$(basename -- "$0")" = "export.sh" ]; then
     exit 1
 fi
 
-ESP32_GCC_RELEASE="esp-14.2.0_20241119"
+ESP32_GCC_RELEASE="esp-15.2.0_20251204"
 ESP8266_GCC_RELEASE="esp-5.2.0_20191018"
 
 ESP32_OPENOCD_VERSION="v0.12.0-esp32-20241016"
@@ -171,7 +171,8 @@ if [ -z "$1" ]; then
     echo "         esp8266 | esp32 | esp32c3 | esp32c6 | esp32h2 | esp32s2 | esp32s3"
     echo "<platform> = xtensa | riscv"
 elif [ "$1" = "all" ]; then
-    ARCH_ALL="esp8266 esp32 esp32c3 esp32c6 esp32h2 esp32s2 esp32s3"
+    # only one representative per architecture is required for target "all"
+    ARCH_ALL="esp8266 esp32 esp32c3"
     for arch in ${ARCH_ALL}; do
         export_arch "$arch"
     done
