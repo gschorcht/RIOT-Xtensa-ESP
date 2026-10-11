@@ -3,6 +3,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     blackpill-stm32f103c8 \
     bluepill-stm32f030c8 \
     bluepill-stm32f103c8 \
+    esp32s2-ci \
     i-nucleo-lrwan1 \
     nucleo-c031c6 \
     nucleo-f030r8 \
